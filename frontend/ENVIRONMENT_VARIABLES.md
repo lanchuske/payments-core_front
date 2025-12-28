@@ -1,8 +1,8 @@
-# Configuración de Variables de Entorno - Frontend ECHEQ Sandbox
+# Configuración de Variables de Entorno - Frontend Payments Platform
 
 ## Descripción
 
-El frontend de ECHEQ Sandbox ahora soporta variables de entorno para configurar dinámicamente las URLs de las APIs, evitando URLs hardcodeadas. **Opción 1**: Todo por Next.js en puerto 3001 - más moderno y eficiente.
+El frontend de Payments Platform soporta variables de entorno para configurar dinámicamente las URLs de las APIs, evitando URLs hardcodeadas. **Opción 1**: Todo por Next.js en puerto 3001 - más moderno y eficiente.
 
 ## Variables de Entorno Soportadas
 

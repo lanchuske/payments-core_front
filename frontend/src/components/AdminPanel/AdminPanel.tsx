@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Credentials } from '@/types';
 import { CredentialsTab } from './CredentialsTab';
 import { TestingTab } from './TestingTab';
@@ -8,10 +8,17 @@ import { DocumentationTab } from './DocumentationTab';
 import { LogsTab } from './LogsTab';
 import { DataTab } from './DataTab';
 import { TenantAdminTab } from './TenantAdminTab';
+import { TransactionsTab } from './TransactionsTab';
+import { TransfersTab } from './TransfersTab';
+import { PaymentLinksTab } from './PaymentLinksTab';
+import { DebitsTab } from './DebitsTab';
+import { ReconciliationTab } from './ReconciliationTab';
+import { ReportsTab } from './ReportsTab';
+import { TenantSelector } from './TenantSelector';
 import { ToastProvider, useToastContext } from '@/contexts/ToastContext';
 import { ToastItem } from '@/components/Toast/ToastItem';
 
-type TabType = 'credentials' | 'testing' | 'docs' | 'logs' | 'data' | 'admin';
+type TabType = 'credentials' | 'transactions' | 'transfers' | 'payment-links' | 'debits' | 'reconciliation' | 'reports' | 'testing' | 'docs' | 'logs' | 'data' | 'admin';
 
 // Componente interno que usa el contexto
 function AdminPanelContent() {
@@ -38,25 +45,31 @@ function AdminPanelContent() {
 
   const tabs = [
     { id: 'credentials', label: 'Credenciales API', icon: '🔑' },
+    { id: 'transactions', label: 'Transacciones', icon: '💳' },
+    { id: 'transfers', label: 'Transferencias', icon: '🔄' },
+    { id: 'payment-links', label: 'Payment Links', icon: '🔗' },
+    { id: 'debits', label: 'Débitos Automáticos', icon: '📅' },
+    { id: 'reconciliation', label: 'Conciliación', icon: '📊' },
+    { id: 'reports', label: 'Reportes', icon: '📈' },
     { id: 'testing', label: 'Testing APIs', icon: '🧪' },
     { id: 'docs', label: 'Documentación', icon: '📚' },
-    { id: 'logs', label: 'Logs en Tiempo Real', icon: '📊' },
+    { id: 'logs', label: 'Logs en Tiempo Real', icon: '📋' },
     { id: 'data', label: 'Datos del Tenant', icon: '🗃️' },
     { id: 'admin', label: 'Admin Tenants', icon: '🔐' },
   ] as const;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 flex">
+    <div className="flex min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800">
       {/* Sidebar Navigation */}
-      <div className="w-64 bg-white/10 backdrop-blur-sm border-r border-white/20 flex flex-col">
+      <div className="flex flex-col w-64 border-r backdrop-blur-sm bg-white/10 border-white/20">
         {/* Sidebar Header */}
         <div className="p-6 border-b border-white/20">
-          <h1 className="text-2xl font-bold text-white mb-2">🚀 ECHEQ Sandbox</h1>
+          <h1 className="mb-2 text-2xl font-bold text-white">💳 Payments Platform</h1>
           <p className="text-sm text-white/80">
-            API de simulación para operaciones ECHEQ según especificación COELSA
+            Plataforma integral de pagos y gestión financiera
           </p>
-          <div className="mt-4 flex items-center">
-            <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+          <div className="flex items-center mt-4">
+            <div className="mr-2 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             <span className="text-xs text-white/70">Servicio Online</span>
           </div>
         </div>
@@ -74,7 +87,7 @@ function AdminPanelContent() {
                       : 'text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <span className="text-lg mr-3">{tab.icon}</span>
+                  <span className="mr-3 text-lg">{tab.icon}</span>
                   <span className="font-medium">{tab.label}</span>
                 </button>
               </li>
@@ -84,7 +97,7 @@ function AdminPanelContent() {
 
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-white/20">
-          <div className="text-xs text-white/60 text-center">
+          <div className="text-xs text-center text-white/60">
             <p>Base de datos conectada</p>
             <p className="mt-1">Ambiente: Development v1.0.0</p>
           </div>
@@ -92,15 +105,16 @@ function AdminPanelContent() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-col flex-1">
         {/* Top Header */}
-        <div className="bg-white/10 backdrop-blur-sm border-b border-white/20 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white flex items-center">
-              <span className="text-lg mr-2">{tabs.find(tab => tab.id === activeTab)?.icon}</span>
+        <div className="p-4 border-b backdrop-blur-sm bg-white/10 border-white/20">
+          <div className="flex justify-between items-center">
+            <h2 className="flex items-center text-xl font-semibold text-white">
+              <span className="mr-2 text-lg">{tabs.find(tab => tab.id === activeTab)?.icon}</span>
               {tabs.find(tab => tab.id === activeTab)?.label}
             </h2>
             <div className="flex items-center space-x-4">
+              <TenantSelector />
               <div className="text-sm text-white/80">
                 {currentTime || '--:--:--'}
               </div>
@@ -109,27 +123,33 @@ function AdminPanelContent() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6 overflow-auto">
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="overflow-auto flex-1 p-6">
+          <div className="mx-auto max-w-6xl">
+            <div className="overflow-hidden bg-white rounded-2xl shadow-2xl">
               <div className="p-6">
                 {activeTab === 'credentials' && (
                   <CredentialsTab onCredentialsGenerated={setCurrentCredentials} />
                 )}
+                {activeTab === 'transactions' && <TransactionsTab />}
+                {activeTab === 'transfers' && <TransfersTab />}
+                {activeTab === 'payment-links' && <PaymentLinksTab />}
+                {activeTab === 'debits' && <DebitsTab />}
+                {activeTab === 'reconciliation' && <ReconciliationTab />}
+                {activeTab === 'reports' && <ReportsTab />}
                 {activeTab === 'testing' && (
                   <TestingTab
                     credentials={currentCredentials}
                     onCredentialsLoaded={setCurrentCredentials}
                   />
                 )}
-                  {activeTab === 'docs' && (
-                    <DocumentationTab credentials={currentCredentials} />
-                  )}
-                  {activeTab === 'logs' && <LogsTab />}
-                  {activeTab === 'data' && <DataTab />}
-                  {activeTab === 'admin' && (
-                    <TenantAdminTab onCredentialsGenerated={setCurrentCredentials} />
-                  )}
+                {activeTab === 'docs' && (
+                  <DocumentationTab credentials={currentCredentials} />
+                )}
+                {activeTab === 'logs' && <LogsTab />}
+                {activeTab === 'data' && <DataTab />}
+                {activeTab === 'admin' && (
+                  <TenantAdminTab onCredentialsGenerated={setCurrentCredentials} />
+                )}
               </div>
             </div>
           </div>
@@ -141,7 +161,7 @@ function AdminPanelContent() {
           {toasts.map((toast, index) => (
             <div
               key={toast.id}
-              className="transform transition-all duration-300 ease-in-out"
+              className="transition-all duration-300 ease-in-out transform"
               style={{
                 transform: `translateY(${index * 8}px)`,
                 zIndex: 50 + index,

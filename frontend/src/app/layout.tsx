@@ -15,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ECHEQ Sandbox',
-  description: 'API de simulación para operaciones ECHEQ según especificación COELSA',
+  title: 'Payments Platform - Admin Console',
+  description: 'Plataforma integral de pagos: cheques electrónicos, transferencias bancarias, pagos digitales, débitos automáticos y conciliación',
+  keywords: 'pagos, cheques electrónicos, transferencias, payment links, débitos automáticos, conciliación bancaria, plataforma de pagos',
 };
 
 export default function RootLayout({

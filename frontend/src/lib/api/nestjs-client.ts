@@ -363,6 +363,332 @@ class NestJSApiClient {
     return response.data;
   }
 
+  // === TRANSACTIONS ===
+
+  async getTransactions(params?: {
+    tenantId?: string;
+    type?: string;
+    status?: string;
+    fromAccountId?: string;
+    toAccountId?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.get(`${baseUrlWithoutPrefix}/api/transactions`, {
+      params,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async getTransaction(id: string, tenantId?: string): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.get(`${baseUrlWithoutPrefix}/api/transactions/${id}`, {
+      params: { tenantId },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async createTransaction(data: any): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.post(`${baseUrlWithoutPrefix}/api/transactions`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  // === TRANSFERS ===
+
+  async createTransfer(data: {
+    tenantId: string;
+    fromAccountId: string;
+    toAccountId?: string;
+    destinationCbu: string;
+    amount: number;
+    currency: string;
+    description?: string;
+    beneficiaryName?: string;
+    beneficiaryCuit?: string;
+  }): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.post(`${baseUrlWithoutPrefix}/api/transfers`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async getTransfers(params?: {
+    tenantId?: string;
+    fromAccountId?: string;
+    toAccountId?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.get(`${baseUrlWithoutPrefix}/api/transfers`, {
+      params,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  // === PAYMENT LINKS ===
+
+  async createPaymentLink(data: {
+    tenantId: string;
+    amount: number;
+    currency: string;
+    description?: string;
+    reference?: string;
+    expiresAt?: string;
+    maxUses?: number;
+    successUrl?: string;
+    cancelUrl?: string;
+    payerInfo?: any;
+  }): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.post(`${baseUrlWithoutPrefix}/api/digital-payments/payment-links/with-qr`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async getPaymentLinks(tenantId: string, status?: string): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.get(`${baseUrlWithoutPrefix}/api/digital-payments/payment-links`, {
+      params: { tenantId, status },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  // === DEBITS ===
+
+  async createDebitMandate(data: {
+    tenantId: string;
+    debtorAccountId: string;
+    creditorAccountId: string;
+    amount: number;
+    currency: string;
+    frequency: string;
+    startDate: string;
+    endDate?: string;
+    description?: string;
+    reference?: string;
+    maxRejections?: number;
+    metadata?: any;
+  }): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.post(`${baseUrlWithoutPrefix}/api/debits/mandates`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async getDebitMandates(tenantId: string, status?: string): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.get(`${baseUrlWithoutPrefix}/api/debits/mandates`, {
+      params: { tenantId, status },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  // === RECONCILIATION ===
+
+  async createReconciliation(data: {
+    tenantId: string;
+    accountId: string;
+    startDate: string;
+    endDate: string;
+    currency?: string;
+    initialBalance?: number;
+    type?: string;
+    metadata?: any;
+  }): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.post(`${baseUrlWithoutPrefix}/api/reconciliation`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async uploadBankStatement(
+    reconciliationId: string,
+    file: File,
+    format: string = 'CSV',
+    amountTolerance?: number,
+    dateToleranceDays?: number,
+  ): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const params = new URLSearchParams();
+    params.append('format', format);
+    if (amountTolerance !== undefined) params.append('amountTolerance', amountTolerance.toString());
+    if (dateToleranceDays !== undefined) params.append('dateToleranceDays', dateToleranceDays.toString());
+
+    const response = await axios.post(
+      `${baseUrlWithoutPrefix}/api/reconciliation/${reconciliationId}/upload?${params.toString()}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: typeof window !== 'undefined' 
+            ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+            : '',
+        },
+      },
+    );
+    return response.data;
+  }
+
+  async getReconciliations(tenantId: string, accountId?: string): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.get(`${baseUrlWithoutPrefix}/api/reconciliation`, {
+      params: { tenantId, accountId },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  // === REPORTS ===
+
+  async getRealtimeMetrics(tenantId: string): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.get(`${baseUrlWithoutPrefix}/api/reports/metrics/realtime`, {
+      params: { tenantId },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async getAnalytics(tenantId: string): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.get(`${baseUrlWithoutPrefix}/api/reports/analytics`, {
+      params: { tenantId },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async generateTransactionReport(data: {
+    tenantId: string;
+    startDate: string;
+    endDate: string;
+    accountIds?: string[];
+  }): Promise<NestJSResponse<any>> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.post(`${baseUrlWithoutPrefix}/api/reports/transactions`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: typeof window !== 'undefined' 
+          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+          : '',
+      },
+    });
+    return response.data;
+  }
+
+  async exportBcraReport(
+    data: {
+      tenantId: string;
+      startDate: string;
+      endDate: string;
+      cuit: string;
+      name: string;
+    },
+    format: 'csv' | 'json',
+  ): Promise<Blob> {
+    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
+    const response = await axios.post(
+      `${baseUrlWithoutPrefix}/api/reports/regulatory/bcra/export/${format}`,
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: typeof window !== 'undefined' 
+            ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
+            : '',
+        },
+        responseType: 'blob',
+      },
+    );
+    return response.data;
+  }
+
   // === MÉTODO GENÉRICO ===
 
   async request<T = any>(config: AxiosRequestConfig): Promise<T> {

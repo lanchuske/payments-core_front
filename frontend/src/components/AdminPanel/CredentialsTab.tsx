@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Credentials, Tenant } from '@/types';
+import { Credentials } from '@/types';
 import { apiService, setStoredCredentials } from '@/lib/api-migrated';
 import { generateRandomData, copyToClipboard } from '@/lib/utils';
 import { useToast } from '@/hooks/useToast';
@@ -13,7 +13,7 @@ interface CredentialsTabProps {
 export function CredentialsTab({
   onCredentialsGenerated,
 }: CredentialsTabProps) {
-  const [step, setStep] = useState(1);
+  const [, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const { showToast, showSuccess, showError } = useToast();
 
@@ -55,8 +55,10 @@ export function CredentialsTab({
       } else {
         showError(`❌ Error: ${result.data.message}`);
       }
-    } catch (error: any) {
-      showError(`❌ Error: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
+      showError(`❌ Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -99,6 +101,10 @@ export function CredentialsTab({
         setGeneratedApiKey(credentialsToStore.apiKey);
         setGeneratedApiSecret(credentialsToStore.apiSecret);
         setStoredCredentials(credentialsToStore);
+        // Guardar tenantId en localStorage para uso en otros componentes
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('tenantId', credentialsToStore.tenantId);
+        }
         onCredentialsGenerated(credentialsToStore);
         showSuccess('✅ API Keys obtenidas exitosamente');
         
@@ -115,8 +121,10 @@ export function CredentialsTab({
       } else {
         showError(`❌ Error: ${result.data.message}`);
       }
-    } catch (error: any) {
-      showError(`❌ Error: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
+      showError(`❌ Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -127,7 +135,7 @@ export function CredentialsTab({
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="mb-2 text-2xl font-bold text-gray-900">
           🔑 Generar Credenciales API - Guía Paso a Paso
         </h2>
         <p className="text-gray-800">
@@ -139,9 +147,9 @@ export function CredentialsTab({
 
 
       {/* Paso 1: Crear Tenant Random (Opcional) */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="p-6 bg-white rounded-lg border border-gray-200">
         <div className="flex items-center mb-4">
-          <span className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
+          <span className="flex justify-center items-center mr-3 w-8 h-8 text-sm font-bold text-white bg-blue-500 rounded-full">
             1
           </span>
           <h3 className="text-lg font-semibold">
@@ -149,11 +157,11 @@ export function CredentialsTab({
           </h3>
         </div>
 
-        <p className="text-gray-600 mb-4">
+        <p className="mb-4 text-gray-600">
           <strong>Opción A:</strong> Crea un tenant con datos aleatorios para
           pruebas rápidas.
         </p>
-        <p className="text-gray-600 mb-4">
+        <p className="mb-4 text-gray-600">
           <strong>Opción B:</strong> Si prefieres usar datos reales, puedes
           saltar este paso e ir directamente al Paso 2.
         </p>
@@ -161,37 +169,37 @@ export function CredentialsTab({
         <div className="flex space-x-4">
           <button
             onClick={fillTestData}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            className="px-4 py-2 text-white bg-blue-500 rounded-md transition-colors hover:bg-blue-600"
           >
             🎲 Crear Tenant Random
           </button>
           <button
             onClick={() => setStep(2)}
-            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+            className="px-4 py-2 text-white bg-gray-500 rounded-md transition-colors hover:bg-gray-600"
           >
             ⏭️ Saltar al Paso 2
           </button>
         </div>
 
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="mt-2 text-sm text-gray-500">
           💡 <strong>Nota:</strong> Los datos random incluyen un nombre, código,
           CUIT y tipo de tenant válidos para testing.
         </p>
       </div>
 
       {/* Paso 2: Crear Tenant */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="p-6 bg-white rounded-lg border border-gray-200">
         <div className="flex items-center mb-4">
-          <span className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
+          <span className="flex justify-center items-center mr-3 w-8 h-8 text-sm font-bold text-white bg-green-500 rounded-full">
             2
           </span>
           <h3 className="text-lg font-semibold">🏦 Paso 2: Crear Tenant</h3>
         </div>
 
         <form onSubmit={handleCreateTenant} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block mb-1 text-sm font-medium text-gray-900">
                 Nombre del Tenant
               </label>
               <input
@@ -200,11 +208,11 @@ export function CredentialsTab({
                 value={tenantName || ''}
                 onChange={e => setTenantName(e.target.value)}
                 placeholder="Ej: Banco Demo"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block mb-1 text-sm font-medium text-gray-900">
                 Código del Tenant
               </label>
               <input
@@ -213,14 +221,14 @@ export function CredentialsTab({
                 value={tenantCode || ''}
                 onChange={e => setTenantCode(e.target.value)}
                 placeholder="Ej: BANCO_DEMO_001"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block mb-1 text-sm font-medium text-gray-900">
                 CUIT (11 dígitos)
               </label>
               <input
@@ -229,18 +237,18 @@ export function CredentialsTab({
                 value={tenantCuit || ''}
                 onChange={e => setTenantCuit(e.target.value)}
                 placeholder="Ej: 20123456789"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block mb-1 text-sm font-medium text-gray-900">
                 Tipo de Institución
               </label>
               <select
                 required
                 value={tenantType || 'BANCO'}
                 onChange={e => setTenantType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 w-full rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="BANCO">Banco</option>
                 <option value="FINANCIERA">Financiera</option>
@@ -252,7 +260,7 @@ export function CredentialsTab({
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 w-full text-white bg-green-500 rounded-md transition-colors hover:bg-green-600 disabled:opacity-50"
           >
             {loading ? '⏳ Creando...' : '✅ Crear Tenant'}
           </button>
@@ -260,9 +268,9 @@ export function CredentialsTab({
       </div>
 
       {/* Paso 3: Generar API Keys */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="p-6 bg-white rounded-lg border border-gray-200">
         <div className="flex items-center mb-4">
-          <span className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
+          <span className="flex justify-center items-center mr-3 w-8 h-8 text-sm font-bold text-white bg-purple-500 rounded-full">
             3
           </span>
           <h3 className="text-lg font-semibold">🔑 Paso 3: Generar API Keys</h3>
@@ -270,7 +278,7 @@ export function CredentialsTab({
 
         <form onSubmit={handleGenerateKeys} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <label className="block mb-1 text-sm font-medium text-gray-900">
               ID del Tenant (se llena automáticamente)
             </label>
             <input
@@ -278,81 +286,81 @@ export function CredentialsTab({
               readOnly
               value={generatedTenantId || ''}
               placeholder="Se llenará automáticamente después de crear el tenant"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-800"
+              className="px-3 py-2 w-full text-gray-800 bg-gray-50 rounded-md border border-gray-300"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading || !generatedTenantId}
-            className="w-full px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 w-full text-white bg-purple-500 rounded-md transition-colors hover:bg-purple-600 disabled:opacity-50"
           >
             {loading ? '⏳ Generando...' : '🔑 Generar API Keys'}
           </button>
         </form>
 
         {generatedApiKey && (
-          <div id="generated-credentials" className="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-xl shadow-xl animate-pulse">
+          <div id="generated-credentials" className="p-6 mt-8 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-300 shadow-xl animate-pulse">
             <div className="flex items-center mb-4">
-              <span className="text-2xl mr-3">🎉</span>
+              <span className="mr-3 text-2xl">🎉</span>
               <h3 className="text-xl font-bold text-green-800">
                 ¡Credenciales Generadas Exitosamente!
               </h3>
             </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-              <p className="text-yellow-800 text-sm">
-                <strong>💡 Importante:</strong> Estas credenciales son específicas para el tenant seleccionado. 
-                Puedes copiarlas usando los botones de abajo y luego ir a la pestaña "Testing APIs" para probarlas.
+            <div className="p-3 mb-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p className="text-sm text-yellow-800">
+                <strong>💡 Importante:</strong> Estas credenciales son específicas para el tenant seleccionado.
+                Puedes copiarlas usando los botones de abajo y luego ir a la pestaña &quot;Testing APIs&quot; para probarlas.
               </p>
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-blue-200 shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-blue-200 shadow-md transition-shadow hover:shadow-lg">
                 <div className="flex-1 mr-4">
-                  <label className="text-sm font-bold text-blue-700 flex items-center mb-2">
+                  <label className="flex items-center mb-2 text-sm font-bold text-blue-700">
                     🔑 API Key
                   </label>
-                  <code className="block text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border break-all">
+                  <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
                     {generatedApiKey}
                   </code>
                 </div>
                 <button
                   onClick={() => copyToClipboard(generatedApiKey, showToast)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 text-sm font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-blue-700 hover:shadow-lg hover:scale-105"
                 >
                   📋 Copiar
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-purple-200 shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-purple-200 shadow-md transition-shadow hover:shadow-lg">
                 <div className="flex-1 mr-4">
-                  <label className="text-sm font-bold text-purple-700 flex items-center mb-2">
+                  <label className="flex items-center mb-2 text-sm font-bold text-purple-700">
                     🔐 API Secret
                   </label>
-                  <code className="block text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border break-all">
+                  <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
                     {generatedApiSecret}
                   </code>
                 </div>
                 <button
                   onClick={() => copyToClipboard(generatedApiSecret, showToast)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 text-sm font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-purple-700 hover:shadow-lg hover:scale-105"
                 >
                   📋 Copiar
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-green-200 shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-green-200 shadow-md transition-shadow hover:shadow-lg">
                 <div className="flex-1 mr-4">
-                  <label className="text-sm font-bold text-green-700 flex items-center mb-2">
+                  <label className="flex items-center mb-2 text-sm font-bold text-green-700">
                     🏢 Tenant ID
                   </label>
-                  <code className="block text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border break-all">
+                  <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
                     {generatedTenantId}
                   </code>
                 </div>
                 <button
                   onClick={() => copyToClipboard(generatedTenantId, showToast)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-sm font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-green-700 hover:shadow-lg hover:scale-105"
                 >
                   📋 Copiar
                 </button>
@@ -366,23 +374,23 @@ export function CredentialsTab({
                   const allCredentials = `API Key: ${generatedApiKey}\nAPI Secret: ${generatedApiSecret}\nTenant ID: ${generatedTenantId}`;
                   copyToClipboard(allCredentials, showToast);
                 }}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="px-6 py-3 font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg transition-all duration-200 transform hover:from-blue-700 hover:to-purple-700 hover:shadow-xl hover:scale-105"
               >
                 📋 Copiar Todas las Credenciales
               </button>
             </div>
 
-            <div className="mt-4 p-3 bg-blue-50 rounded-md">
-              <h4 className="font-semibold text-blue-800 mb-2">
+            <div className="p-3 mt-4 bg-blue-50 rounded-md">
+              <h4 className="mb-2 font-semibold text-blue-800">
                 🚀 Próximos Pasos
               </h4>
-              <ul className="text-sm text-blue-700 space-y-1">
+              <ul className="space-y-1 text-sm text-blue-700">
                 <li>
-                  1. Ve a la pestaña <strong>"Testing APIs"</strong>
+                  1. Ve a la pestaña <strong>&quot;Testing APIs&quot;</strong>
                 </li>
                 <li>
                   2. Haz clic en{' '}
-                  <strong>"Cargar Credenciales Generadas"</strong>
+                  <strong>&quot;Cargar Credenciales Generadas&quot;</strong>
                 </li>
                 <li>3. Configura la autenticación automática</li>
                 <li>4. Prueba los endpoints en Swagger</li>
