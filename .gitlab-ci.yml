@@ -1,0 +1,76 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  ACR_REGISTRY: echeqregistry8438.azurecr.io
+  ACR_NAME: echeqregistry8438
+  IMAGE_NAME: echeq-sandbox
+  AZURE_RESOURCE_GROUP: ECHEQ_RG
+  AZURE_WEBAPP_NAME: echeq-sandbox-app
+  DOCKER_DRIVER: overlay2
+  # URLs por defecto (pueden ser sobrescritas por variables de CI/CD)
+  NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://echeq-sandbox-nestjs-app.azurewebsites.net/api/coelsa}
+  NEXT_PUBLIC_SWAGGER_URL: ${NEXT_PUBLIC_SWAGGER_URL:-https://echeq-sandbox-nestjs-app.azurewebsites.net/api/docs}
+  NEXT_PUBLIC_FRONTEND_URL: ${NEXT_PUBLIC_FRONTEND_URL:-https://echeq-sandbox-app.azurewebsites.net}
+
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - echo "Login al ACR..."
+    - |
+      if [ -z "$ACR_USERNAME" ] || [ -z "$ACR_PASSWORD" ]; then
+        echo "Error: ACR_USERNAME o ACR_PASSWORD no están configuradas"
+        exit 1
+      fi
+    - echo "$ACR_PASSWORD" | docker login -u "$ACR_USERNAME" --password-stdin "$ACR_REGISTRY"
+  script:
+    - echo "Building Docker image with NEXT_PUBLIC_* build args..."
+    - |
+      docker build \
+        --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+        --build-arg NEXT_PUBLIC_SWAGGER_URL="$NEXT_PUBLIC_SWAGGER_URL" \
+        --build-arg NEXT_PUBLIC_FRONTEND_URL="$NEXT_PUBLIC_FRONTEND_URL" \
+        -t $ACR_REGISTRY/$IMAGE_NAME:latest \
+        -t $ACR_REGISTRY/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA \
+        -f Dockerfile .
+    - echo "Pushing images to ACR..."
+    - docker push $ACR_REGISTRY/$IMAGE_NAME:latest
+    - docker push $ACR_REGISTRY/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
+    - echo "Build y push completados exitosamente"
+  only:
+    - main
+    - master
+    - local
+  # Sin tags para usar runners compartidos de GitLab
+
+deploy:
+  stage: deploy
+  image: mcr.microsoft.com/azure-cli:latest
+  dependencies:
+    - build
+  before_script:
+    - echo "Login a Azure..."
+    - |
+      if [ -z "$AZURE_CLIENT_ID" ] || [ -z "$AZURE_CLIENT_SECRET" ] || [ -z "$AZURE_TENANT_ID" ]; then
+        echo "Error: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET o AZURE_TENANT_ID no están configuradas"
+        exit 1
+      fi
+    - az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID"
+  script:
+    - echo "Configurando App Service..."
+    - ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query "passwords[0].value" -o tsv)
+    - az webapp config container set --name $AZURE_WEBAPP_NAME --resource-group $AZURE_RESOURCE_GROUP --docker-custom-image-name $ACR_REGISTRY/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA --docker-registry-server-url https://$ACR_REGISTRY --docker-registry-server-user $ACR_USERNAME --docker-registry-server-password "$ACR_PASSWORD"
+    - echo "Reiniciando App Service..."
+    - az webapp restart --name $AZURE_WEBAPP_NAME --resource-group $AZURE_RESOURCE_GROUP
+    - echo "Deployment completado exitosamente"
+  only:
+    - main
+    - master
+    - local
+  when: manual
+  # Sin tags para usar runners compartidos de GitLab
+

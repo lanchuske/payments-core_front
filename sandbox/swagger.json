@@ -1,0 +1,2653 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API COELSA - Simulador ECHEQ",
+    "description": "API oficial de COELSA para operaciones con cheques electrónicos (eCheq) según especificación oficial. **Las credenciales se cargan automáticamente desde el panel de administración.**",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Equipo de Desarrollo ECHEQ",
+      "email": "desarrollo@echeq.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api/coelsa",
+      "description": "Servidor de desarrollo"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Endpoints de verificación de salud del sistema"
+    },
+    {
+      "name": "Cuentas COELSA",
+      "description": "Gestión de cuentas emisoras"
+    },
+    {
+      "name": "Cheques COELSA",
+      "description": "Gestión de cheques electrónicos"
+    },
+    {
+      "name": "Consultas COELSA",
+      "description": "Consultas y reportes de cheques"
+    },
+    {
+      "name": "Endosos COELSA",
+      "description": "Gestión de endosos"
+    },
+    {
+      "name": "Custodia COELSA",
+      "description": "Gestión de custodia"
+    },
+    {
+      "name": "Devoluciones COELSA",
+      "description": "Gestión de devoluciones"
+    },
+    {
+      "name": "Certificados COELSA",
+      "description": "Gestión de certificados CAC"
+    },
+    {
+      "name": "Cesión COELSA",
+      "description": "Gestión de cesión de derechos"
+    },
+    {
+      "name": "Avales COELSA",
+      "description": "Gestión de avales"
+    },
+    {
+      "name": "Mandatos COELSA",
+      "description": "Gestión de mandatos"
+    },
+    {
+      "name": "Notificaciones COELSA",
+      "description": "Gestión de notificaciones"
+    },
+    {
+      "name": "Seguridad COELSA",
+      "description": "Autenticación y tokens"
+    },
+    {
+      "name": "Operaciones Masivas COELSA",
+      "description": "Operaciones masivas de cuentas y cheques"
+    },
+    {
+      "name": "Message Queue COELSA",
+      "description": "Gestión de colas de mensajes"
+    },
+    {
+      "name": "Administración",
+      "description": "Endpoints administrativos del sistema"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check del sistema",
+        "description": "Verifica el estado general del sandbox ECHEQ",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "Sistema funcionando correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "echeq-sandbox-coelsa"
+                    },
+                    "environment": {
+                      "type": "string",
+                      "example": "sandbox"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cuentas/Cuenta": {
+      "get": {
+        "summary": "Obtener cuentas emisoras",
+        "description": "Obtiene la lista de cuentas emisoras registradas según especificación COELSA",
+        "tags": ["Cuentas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de cuentas emisoras obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CuentaCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear o actualizar cuenta emisora",
+        "description": "Crea una nueva cuenta emisora o actualiza una existente según especificación COELSA",
+        "tags": ["Cuentas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuentaCOELSA"
+              },
+              "example": {
+                "emisor_cuit": "20123456789",
+                "emisor_cbu": "1234567890123456789012",
+                "emisor_nombre": "Empresa Ejemplo S.A.",
+                "emisor_tipo": "emisor"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cuenta emisora creada/actualizada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Cheque": {
+      "get": {
+        "summary": "Obtener cheques electrónicos",
+        "description": "Obtiene la lista de cheques electrónicos registrados según especificación COELSA",
+        "tags": ["Cheques COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de cheques obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChequeCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear cheque electrónico",
+        "description": "Crea un nuevo cheque electrónico según especificación COELSA. **Los campos marcados con * son obligatorios.**",
+        "tags": ["Cheques COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChequeCOELSA"
+              },
+              "example": {
+                "emisor_cuit": "20123456789",
+                "emisor_cbu": "1234567890123456789012",
+                "beneficiario_documento": "30123456789",
+                "beneficiario_nombre": "Juan Pérez",
+                "monto": 50000,
+                "fecha_emision": "2025-09-24",
+                "fecha_vencimiento": "2025-10-24",
+                "concepto": "Pago de servicios profesionales"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque electrónico creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Emitido/Admitir": {
+      "post": {
+        "summary": "Admitir cheque emitido",
+        "description": "Admite un cheque emitido para su procesamiento según especificación COELSA",
+        "tags": ["Cheques COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheque_id": {
+                    "type": "string",
+                    "description": "* ID del cheque a admitir",
+                    "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+                  },
+                  "beneficiario_documento": {
+                    "type": "string",
+                    "description": "* Documento del beneficiario",
+                    "example": "30123456789"
+                  }
+                },
+                "required": ["cheque_id", "beneficiario_documento"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque admitido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Emitido/Repudiar": {
+      "post": {
+        "summary": "Repudiar cheque emitido",
+        "description": "Repudia un cheque emitido según especificación COELSA",
+        "tags": ["Cheques COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheque_id": {
+                    "type": "string",
+                    "description": "* ID del cheque a repudiar",
+                    "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+                  }
+                },
+                "required": ["cheque_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque repudiado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Emitido/Anular": {
+      "post": {
+        "summary": "Anular cheque emitido",
+        "description": "Anula un cheque emitido según especificación COELSA",
+        "tags": ["Cheques COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheque_id": {
+                    "type": "string",
+                    "description": "* ID del cheque a anular",
+                    "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+                  }
+                },
+                "required": ["cheque_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque anulado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Activo/Depositar": {
+      "post": {
+        "summary": "Depositar cheque activo",
+        "description": "Deposita un cheque activo según especificación COELSA",
+        "tags": ["Cheques COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheque_id": {
+                    "type": "string",
+                    "description": "* ID del cheque a depositar",
+                    "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+                  },
+                  "beneficiario_documento": {
+                    "type": "string",
+                    "description": "* Documento del beneficiario",
+                    "example": "30123456789"
+                  }
+                },
+                "required": ["cheque_id", "beneficiario_documento"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque depositado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Activo/Pagar": {
+      "post": {
+        "summary": "Pagar cheque activo",
+        "description": "Paga un cheque activo según especificación COELSA",
+        "tags": ["Cheques COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheque_id": {
+                    "type": "string",
+                    "description": "* ID del cheque a pagar",
+                    "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+                  }
+                },
+                "required": ["cheque_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque pagado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Activo/RechazarPago": {
+      "post": {
+        "summary": "Rechazar pago de cheque activo",
+        "description": "Rechaza el pago de un cheque activo según especificación COELSA",
+        "tags": ["Cheques COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheque_id": {
+                    "type": "string",
+                    "description": "* ID del cheque a rechazar pago",
+                    "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+                  }
+                },
+                "required": ["cheque_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pago de cheque rechazado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/consulta/estado": {
+      "get": {
+        "summary": "Consultar estado de cheques",
+        "description": "Consulta el estado general de cheques según especificación COELSA",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "emisor_cuit",
+            "in": "query",
+            "description": "CUIT del emisor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "beneficiario_cuit",
+            "in": "query",
+            "description": "CUIT del beneficiario",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado de cheques consultado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Estado": {
+      "get": {
+        "summary": "Consultar estado de cheques",
+        "description": "Consulta el estado de cheques según especificación COELSA",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado de cheques obtenido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Lista": {
+      "get": {
+        "summary": "Listar cheques",
+        "description": "Obtiene la lista de cheques según especificación COELSA",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de cheques obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Conciliacion/{fecha}": {
+      "get": {
+        "summary": "Conciliación de cheques por fecha",
+        "description": "Obtiene la conciliación de cheques para una fecha específica",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "fecha",
+            "in": "path",
+            "required": true,
+            "description": "Fecha de conciliación (YYYY-MM-DD)",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conciliación obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/ReporteCausales": {
+      "get": {
+        "summary": "Reporte de causales",
+        "description": "Obtiene el reporte de causales de rechazo de cheques",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reporte de causales obtenido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/consulta/por-cmc7": {
+      "get": {
+        "summary": "Consultar cheque por CMC7",
+        "description": "Consulta un cheque específico por su código CMC7",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cmc7",
+            "in": "query",
+            "required": true,
+            "description": "Código CMC7 del cheque",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cheque consultado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/consulta/por-id": {
+      "get": {
+        "summary": "Consultar cheque por ID",
+        "description": "Consulta un cheque específico por su ID",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cheque_id",
+            "in": "query",
+            "required": true,
+            "description": "ID del cheque",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cheque consultado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Consulta/Numero": {
+      "get": {
+        "summary": "Consultar cheque por número",
+        "description": "Consulta un cheque específico por su número",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "numero_cheque",
+            "in": "query",
+            "required": true,
+            "description": "Número del cheque",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cheque consultado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cheques/Consulta/Cmc7": {
+      "get": {
+        "summary": "Consultar cheque por CMC7",
+        "description": "Consulta un cheque específico por su código CMC7",
+        "tags": ["Consultas COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cmc7",
+            "in": "query",
+            "required": true,
+            "description": "Código CMC7 del cheque",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cheque consultado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Endosos/Nominal": {
+      "get": {
+        "summary": "Obtener endosos nominales",
+        "description": "Obtiene la lista de endosos nominales según especificación COELSA",
+        "tags": ["Endosos COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de endosos obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EndosoCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear endoso nominal",
+        "description": "Crea un nuevo endoso nominal según especificación COELSA",
+        "tags": ["Endosos COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndosoCOELSA"
+              },
+              "example": {
+                "cheque_id": "36054d3f-4365-4bff-9980-8d9e5b55d9a7",
+                "endosante_documento": "30123456789",
+                "endosatario_documento": "40123456789",
+                "endosatario_cbu": "1111111111111111111111"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Endoso nominal creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Custodia/Poner": {
+      "get": {
+        "summary": "Obtener custodia",
+        "description": "Obtiene la lista de cheques en custodia según especificación COELSA",
+        "tags": ["Custodia COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de custodia obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CustodiaCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Poner cheque en custodia",
+        "description": "Pone un cheque en custodia según especificación COELSA",
+        "tags": ["Custodia COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustodiaCOELSA"
+              },
+              "example": {
+                "cheque_id": "36054d3f-4365-4bff-9980-8d9e5b55d9a7",
+                "emisor_cuit": "20123456789",
+                "beneficiario_documento": "30123456789"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque puesto en custodia exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Custodia/Retirar": {
+      "post": {
+        "summary": "Retirar cheque de custodia",
+        "description": "Retira un cheque de custodia según especificación COELSA",
+        "tags": ["Custodia COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheque_id": {
+                    "type": "string",
+                    "description": "* ID del cheque a retirar",
+                    "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+                  }
+                },
+                "required": ["cheque_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque retirado de custodia exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Devoluciones/Solicitar": {
+      "get": {
+        "summary": "Obtener devoluciones solicitadas",
+        "description": "Obtiene la lista de devoluciones solicitadas según especificación COELSA",
+        "tags": ["Devoluciones COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de devoluciones obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DevolucionCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Solicitar devolución",
+        "description": "Solicita la devolución de un cheque según especificación COELSA",
+        "tags": ["Devoluciones COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevolucionCOELSA"
+              },
+              "example": {
+                "cheque_id": "36054d3f-4365-4bff-9980-8d9e5b55d9a7",
+                "motivo": "Fondos insuficientes",
+                "solicitante_cuit": "20123456789"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Devolución solicitada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Devoluciones/Devolver": {
+      "post": {
+        "summary": "Devolver cheque",
+        "description": "Devuelve un cheque según especificación COELSA",
+        "tags": ["Devoluciones COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheque_id": {
+                    "type": "string",
+                    "description": "* ID del cheque a devolver",
+                    "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+                  },
+                  "motivo": {
+                    "type": "string",
+                    "description": "Motivo de la devolución",
+                    "example": "Fondos insuficientes"
+                  }
+                },
+                "required": ["cheque_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cheque devuelto exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Certificados/Emitir": {
+      "get": {
+        "summary": "Obtener certificados emitidos",
+        "description": "Obtiene la lista de certificados emitidos según especificación COELSA",
+        "tags": ["Certificados COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de certificados obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CertificadoCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Emitir certificado CAC",
+        "description": "Emite un certificado CAC según especificación COELSA",
+        "tags": ["Certificados COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emisor_cuit": {
+                    "type": "string",
+                    "description": "* CUIT del emisor",
+                    "example": "20123456789"
+                  },
+                  "certificado_data": {
+                    "type": "string",
+                    "description": "* Datos del certificado",
+                    "example": "certificado_data_base64"
+                  }
+                },
+                "required": ["emisor_cuit", "certificado_data"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Certificado emitido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Cesion/Solicitar": {
+      "get": {
+        "summary": "Obtener cesiones",
+        "description": "Obtiene la lista de cesiones según especificación COELSA",
+        "tags": ["Cesión COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de cesiones obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CesionCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Solicitar cesión",
+        "description": "Solicita una cesión según especificación COELSA",
+        "tags": ["Cesión COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CesionCOELSA"
+              },
+              "example": {
+                "cheque_id": "36054d3f-4365-4bff-9980-8d9e5b55d9a7",
+                "cesionario_documento": "40123456789",
+                "cesionario_nombre": "María García"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cesión solicitada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Avales/Solicitar": {
+      "get": {
+        "summary": "Obtener avales solicitados",
+        "description": "Obtiene la lista de avales solicitados según especificación COELSA",
+        "tags": ["Avales COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de avales obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AvalCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Solicitar aval",
+        "description": "Solicita un aval para un cheque según especificación COELSA",
+        "tags": ["Avales COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvalCOELSA"
+              },
+              "example": {
+                "cheque_id": "36054d3f-4365-4bff-9980-8d9e5b55d9a7",
+                "aval_cuit": "20123456789",
+                "solicitante_cuit": "30123456789"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aval solicitado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Mandatos/Cobro/Crear": {
+      "get": {
+        "summary": "Obtener mandatos de cobro",
+        "description": "Obtiene la lista de mandatos de cobro según especificación COELSA",
+        "tags": ["Mandatos COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de mandatos obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MandatoCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear mandato de cobro",
+        "description": "Crea un mandato de cobro según especificación COELSA",
+        "tags": ["Mandatos COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MandatoCOELSA"
+              },
+              "example": {
+                "mandante_cuit": "20123456789",
+                "mandatario_cuit": "30123456789",
+                "cheque_id": "36054d3f-4365-4bff-9980-8d9e5b55d9a7",
+                "tipo_mandato": "cobro"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mandato de cobro creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Notificaciones/Pendientes": {
+      "get": {
+        "summary": "Obtener notificaciones pendientes",
+        "description": "Obtiene la lista de notificaciones pendientes según especificación COELSA",
+        "tags": ["Notificaciones COELSA"],
+        "security": [
+          {
+            "CoelsaApiKey": [],
+            "CoelsaApiSecret": [],
+            "CoelsaTenantId": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de notificaciones obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/NotificacionCOELSA"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Endosos/SinGarantia": {
+      "post": {
+        "summary": "Endosar sin garantía",
+        "description": "Endosar un cheque sin garantía según especificación COELSA",
+        "tags": ["Endosos COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cheque_id", "tenedor_documento", "beneficiario_endoso_documento"],
+                "properties": {
+                  "cheque_id": {"type": "string", "example": "W612E3G336L2GXY"},
+                  "tenedor_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "tenedor_documento": {"type": "string", "example": "27375575847"},
+                  "beneficiario_endoso_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "beneficiario_endoso_documento": {"type": "string", "example": "20000000044"},
+                  "datos_aval": {"type": "object"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Endosos/Procuración": {
+      "post": {
+        "summary": "Endosar en procuración",
+        "description": "Endosar un cheque en procuración según especificación COELSA",
+        "tags": ["Endosos COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cheque_id", "tenedor_documento", "beneficiario_endoso_documento", "beneficiario_final_documento"],
+                "properties": {
+                  "cheque_id": {"type": "string", "example": "W612E3G336L2GXY"},
+                  "tenedor_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "tenedor_documento": {"type": "string", "example": "27375575847"},
+                  "beneficiario_endoso_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "beneficiario_endoso_documento": {"type": "string", "example": "20000000044"},
+                  "beneficiario_final_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "beneficiario_final_documento": {"type": "string", "example": "20000000044"},
+                  "datos_aval": {"type": "object"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Endosos/Anular": {
+      "post": {
+        "summary": "Anular endoso",
+        "description": "Anular un endoso existente según especificación COELSA",
+        "tags": ["Endosos COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cheque_id", "endosante_documento", "motivo_anulacion"],
+                "properties": {
+                  "cheque_id": {"type": "string", "example": "4OGNYJ6PG7VN0L6"},
+                  "endosante_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "endosante_documento": {"type": "string", "example": "30702179153"},
+                  "motivo_anulacion": {"type": "string", "example": "UNIT TEST ANULACION OK"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Cesion/Emitir": {
+      "post": {
+        "summary": "Emitir cesión electrónica de derechos",
+        "description": "Emitir una cesión electrónica de derechos (CED) según especificación COELSA",
+        "tags": ["Cesión COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cheque_id", "cedente_documento", "cesionario_documento"],
+                "properties": {
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "cedente_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "cedente_documento": {"type": "string", "example": "20000009971"},
+                  "cedente_nombre": {"type": "string", "example": "Empresa Cedente"},
+                  "cesionario_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "cesionario_documento": {"type": "string", "example": "27375575847"},
+                  "cesionario_nombre": {"type": "string", "example": "Empresa Cesionaria"},
+                  "fecha_cesion": {"type": "string", "format": "date", "example": "2024-01-15"},
+                  "observaciones": {"type": "string", "example": "Cesión por pago de deuda"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Cesion/Anular": {
+      "post": {
+        "summary": "Anular cesión electrónica de derechos",
+        "description": "Anular una cesión electrónica de derechos según especificación COELSA",
+        "tags": ["Cesión COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cesion_id", "cheque_id", "cedente_documento", "motivo_anulacion"],
+                "properties": {
+                  "cesion_id": {"type": "string", "example": "CES-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "cedente_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "cedente_documento": {"type": "string", "example": "20000009971"},
+                  "motivo_anulacion": {"type": "string", "example": "Error en datos"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Cesion/Admitir": {
+      "post": {
+        "summary": "Admitir cesión electrónica de derechos",
+        "description": "Admitir una cesión electrónica de derechos según especificación COELSA",
+        "tags": ["Cesión COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cesion_id", "cheque_id", "cesionario_documento"],
+                "properties": {
+                  "cesion_id": {"type": "string", "example": "CES-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "cesionario_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "cesionario_documento": {"type": "string", "example": "27375575847"},
+                  "fecha_admision": {"type": "string", "format": "date", "example": "2024-01-15"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Cesion/Repudiar": {
+      "post": {
+        "summary": "Repudiar cesión electrónica de derechos",
+        "description": "Repudiar una cesión electrónica de derechos según especificación COELSA",
+        "tags": ["Cesión COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cesion_id", "cheque_id", "cesionario_documento", "cesion_motivo_repudio"],
+                "properties": {
+                  "cesion_id": {"type": "string", "example": "CES-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "cesionario_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "cesionario_documento": {"type": "string", "example": "27375575847"},
+                  "cesion_motivo_repudio": {"type": "string", "example": "No acepto la cesión"},
+                  "fecha_repudio": {"type": "string", "format": "date", "example": "2024-01-15"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Avales/Anular": {
+      "post": {
+        "summary": "Anular solicitud de aval",
+        "description": "Anular una solicitud de aval según especificación COELSA",
+        "tags": ["Avales COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["aval_id", "cheque_id", "avalista_documento", "motivo_anulacion"],
+                "properties": {
+                  "aval_id": {"type": "string", "example": "AVAL-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "avalista_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "avalista_documento": {"type": "string", "example": "27375575847"},
+                  "motivo_anulacion": {"type": "string", "example": "Error en datos"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Avales/Admitir": {
+      "post": {
+        "summary": "Admitir solicitud de aval",
+        "description": "Admitir una solicitud de aval según especificación COELSA",
+        "tags": ["Avales COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["aval_id", "cheque_id", "avalista_documento"],
+                "properties": {
+                  "aval_id": {"type": "string", "example": "AVAL-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "avalista_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "avalista_documento": {"type": "string", "example": "27375575847"},
+                  "fecha_admision": {"type": "string", "format": "date", "example": "2024-01-15"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Avales/Repudiar": {
+      "post": {
+        "summary": "Repudiar solicitud de aval",
+        "description": "Repudiar una solicitud de aval según especificación COELSA",
+        "tags": ["Avales COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["aval_id", "cheque_id", "avalista_documento", "aval_motivo_repudio"],
+                "properties": {
+                  "aval_id": {"type": "string", "example": "AVAL-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "avalista_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "avalista_documento": {"type": "string", "example": "27375575847"},
+                  "aval_motivo_repudio": {"type": "string", "example": "No acepto el aval"},
+                  "fecha_repudio": {"type": "string", "format": "date", "example": "2024-01-15"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Mandatos/Cobro/Anular": {
+      "post": {
+        "summary": "Anular mandato de cobro",
+        "description": "Anular un mandato de cobro según especificación COELSA",
+        "tags": ["Mandatos COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["mandato_id", "cheque_id", "mandante_documento", "motivo_anulacion"],
+                "properties": {
+                  "mandato_id": {"type": "string", "example": "MAND-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "mandante_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "mandante_documento": {"type": "string", "example": "20000009971"},
+                  "motivo_anulacion": {"type": "string", "example": "Error en datos"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Mandatos/Cobro/Admitir": {
+      "post": {
+        "summary": "Admitir mandato de cobro",
+        "description": "Admitir un mandato de cobro según especificación COELSA",
+        "tags": ["Mandatos COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["mandato_id", "cheque_id", "mandatario_documento"],
+                "properties": {
+                  "mandato_id": {"type": "string", "example": "MAND-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "mandatario_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "mandatario_documento": {"type": "string", "example": "27375575847"},
+                  "fecha_admision": {"type": "string", "format": "date", "example": "2024-01-15"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Mandatos/Cobro/Repudiar": {
+      "post": {
+        "summary": "Repudiar mandato de cobro",
+        "description": "Repudiar un mandato de cobro según especificación COELSA",
+        "tags": ["Mandatos COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["mandato_id", "cheque_id", "mandatario_documento", "mandato_motivo_repudio"],
+                "properties": {
+                  "mandato_id": {"type": "string", "example": "MAND-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "mandatario_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "mandatario_documento": {"type": "string", "example": "27375575847"},
+                  "mandato_motivo_repudio": {"type": "string", "example": "No acepto el mandato"},
+                  "fecha_repudio": {"type": "string", "format": "date", "example": "2024-01-15"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Mandatos/Cobro/Revocar": {
+      "post": {
+        "summary": "Revocar mandato de cobro",
+        "description": "Revocar un mandato de cobro según especificación COELSA",
+        "tags": ["Mandatos COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["mandato_id", "cheque_id", "mandante_documento", "motivo_revocacion"],
+                "properties": {
+                  "mandato_id": {"type": "string", "example": "MAND-123456"},
+                  "cheque_id": {"type": "string", "example": "LMDN3GDGGJK2E7R"},
+                  "mandante_documento_tipo": {"type": "string", "example": "CUIT"},
+                  "mandante_documento": {"type": "string", "example": "20000009971"},
+                  "motivo_revocacion": {"type": "string", "example": "Cambio de condiciones"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Seguridad/Token": {
+      "post": {
+        "summary": "Generar token de seguridad",
+        "description": "Genera un token de seguridad para autenticación según especificación COELSA",
+        "tags": ["Seguridad COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grant_type": {"type": "string", "description": "* Tipo de concesión", "example": "client_credentials"},
+                  "scope": {"type": "string", "description": "Alcance del token", "example": "coelsa_api"}
+                },
+                "required": ["grant_type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Conciliacion/{fecha}": {
+      "get": {
+        "summary": "Conciliación general por fecha",
+        "description": "Obtiene la conciliación general para una fecha específica",
+        "tags": ["Consultas COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "parameters": [
+          {
+            "name": "fecha",
+            "in": "path",
+            "required": true,
+            "description": "Fecha de conciliación (YYYY-MM-DD)",
+            "schema": {"type": "string", "format": "date"}
+          }
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/Reportes/Causales": {
+      "get": {
+        "summary": "Reporte general de causales",
+        "description": "Obtiene el reporte general de causales de rechazo",
+        "tags": ["Consultas COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/masivo/cuentas/alta": {
+      "post": {
+        "summary": "Alta masiva de cuentas",
+        "description": "Realiza el alta masiva de cuentas según especificación COELSA",
+        "tags": ["Operaciones Masivas COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cuentas": {"type": "array", "description": "* Array de cuentas a dar de alta", "items": {"$ref": "#/components/schemas/CuentaCOELSA"}}
+                },
+                "required": ["cuentas"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/masivo/cheques/crear": {
+      "post": {
+        "summary": "Creación masiva de cheques",
+        "description": "Realiza la creación masiva de cheques según especificación COELSA",
+        "tags": ["Operaciones Masivas COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheques": {"type": "array", "description": "* Array de cheques a crear", "items": {"$ref": "#/components/schemas/ChequeCOELSA"}}
+                },
+                "required": ["cheques"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/masivo/cheques/admitir": {
+      "post": {
+        "summary": "Admisión masiva de cheques",
+        "description": "Realiza la admisión masiva de cheques según especificación COELSA",
+        "tags": ["Operaciones Masivas COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cheques": {"type": "array", "description": "* Array de IDs de cheques a admitir", "items": {"type": "string"}}
+                },
+                "required": ["cheques"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/mq/suscribir": {
+      "post": {
+        "summary": "Suscribirse a cola de mensajes",
+        "description": "Se suscribe a una cola de mensajes según especificación COELSA",
+        "tags": ["Message Queue COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "queue_name": {"type": "string", "description": "* Nombre de la cola", "example": "echeq_notifications"},
+                  "callback_url": {"type": "string", "description": "* URL de callback", "example": "https://mi-servidor.com/webhook"}
+                },
+                "required": ["queue_name", "callback_url"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/mq/publicar": {
+      "post": {
+        "summary": "Publicar mensaje en cola",
+        "description": "Publica un mensaje en una cola según especificación COELSA",
+        "tags": ["Message Queue COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "queue_name": {"type": "string", "description": "* Nombre de la cola", "example": "echeq_notifications"},
+                  "message": {"type": "object", "description": "* Contenido del mensaje"}
+                },
+                "required": ["queue_name", "message"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/mq/estado": {
+      "get": {
+        "summary": "Consultar estado de colas",
+        "description": "Consulta el estado de las colas de mensajes según especificación COELSA",
+        "tags": ["Message Queue COELSA"],
+        "security": [{"CoelsaApiKey": []}],
+        "responses": {
+          "200": {"$ref": "#/components/responses/SuccessResponse"},
+          "400": {"$ref": "#/components/responses/BadRequestResponse"},
+          "401": {"$ref": "#/components/responses/UnauthorizedResponse"},
+          "500": {"$ref": "#/components/responses/InternalServerErrorResponse"}
+        }
+      }
+    },
+    "/swagger.json": {
+      "get": {
+        "summary": "Obtener documentación Swagger",
+        "description": "Obtiene la documentación Swagger de la API",
+        "tags": ["Administración"],
+        "responses": {
+          "200": {
+            "description": "Documentación Swagger obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {"type": "object"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "CoelsaApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API Key para autenticación COELSA (se carga automáticamente desde el panel)"
+      },
+      "CoelsaApiSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Secret",
+        "description": "API Secret para autenticación COELSA (se carga automáticamente desde el panel)"
+      },
+      "CoelsaTenantId": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Tenant-ID",
+        "description": "ID del tenant para autenticación COELSA (se carga automáticamente desde el panel)"
+      }
+    },
+    "schemas": {
+      "CuentaCOELSA": {
+        "type": "object",
+        "properties": {
+          "emisor_cuit": {
+            "type": "string",
+            "description": "* CUIT del emisor (11 dígitos)",
+            "pattern": "^\\d{11}$",
+            "example": "20123456789"
+          },
+          "emisor_cbu": {
+            "type": "string",
+            "description": "* CBU del emisor (22 dígitos)",
+            "pattern": "^\\d{22}$",
+            "example": "1234567890123456789012"
+          },
+          "emisor_nombre": {
+            "type": "string",
+            "description": "Nombre del emisor (opcional)",
+            "example": "Empresa Ejemplo S.A."
+          },
+          "emisor_tipo": {
+            "type": "string",
+            "enum": ["emisor", "beneficiario"],
+            "description": "Tipo de emisor (opcional)",
+            "example": "emisor"
+          }
+        },
+        "required": ["emisor_cuit", "emisor_cbu"]
+      },
+      "ChequeCOELSA": {
+        "type": "object",
+        "properties": {
+          "emisor_cuit": {
+            "type": "string",
+            "description": "* CUIT del emisor (11 dígitos)",
+            "pattern": "^\\d{11}$",
+            "example": "20123456789"
+          },
+          "emisor_cbu": {
+            "type": "string",
+            "description": "* CBU del emisor (22 dígitos)",
+            "pattern": "^\\d{22}$",
+            "example": "1234567890123456789012"
+          },
+          "beneficiario_documento": {
+            "type": "string",
+            "description": "* Documento del beneficiario (DNI, CUIT, etc.)",
+            "example": "30123456789"
+          },
+          "beneficiario_nombre": {
+            "type": "string",
+            "description": "* Nombre completo del beneficiario",
+            "example": "Juan Pérez"
+          },
+          "monto": {
+            "type": "number",
+            "description": "* Monto del cheque (mínimo $100)",
+            "minimum": 100,
+            "example": 50000
+          },
+          "fecha_emision": {
+            "type": "string",
+            "format": "date",
+            "description": "Fecha de emisión (opcional, por defecto hoy)",
+            "example": "2025-09-24"
+          },
+          "fecha_vencimiento": {
+            "type": "string",
+            "format": "date",
+            "description": "Fecha de vencimiento (opcional, por defecto 30 días)",
+            "example": "2025-10-24"
+          },
+          "concepto": {
+            "type": "string",
+            "description": "Concepto del cheque (opcional)",
+            "example": "Pago de servicios profesionales"
+          }
+        },
+        "required": ["emisor_cuit", "emisor_cbu", "beneficiario_documento", "beneficiario_nombre", "monto"]
+      },
+      "EndosoCOELSA": {
+        "type": "object",
+        "properties": {
+          "cheque_id": {
+            "type": "string",
+            "description": "* ID del cheque a endosar",
+            "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+          },
+          "endosante_documento": {
+            "type": "string",
+            "description": "* Documento del endosante",
+            "example": "30123456789"
+          },
+          "endosatario_documento": {
+            "type": "string",
+            "description": "* Documento del endosatario",
+            "example": "40123456789"
+          },
+          "endosatario_cbu": {
+            "type": "string",
+            "description": "CBU del endosatario (opcional)",
+            "example": "1111111111111111111111"
+          }
+        },
+        "required": ["cheque_id", "endosante_documento", "endosatario_documento"]
+      },
+      "CustodiaCOELSA": {
+        "type": "object",
+        "properties": {
+          "cheque_id": {
+            "type": "string",
+            "description": "* ID del cheque en custodia",
+            "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+          },
+          "emisor_cuit": {
+            "type": "string",
+            "description": "* CUIT del emisor",
+            "pattern": "^\\d{11}$",
+            "example": "20123456789"
+          },
+          "beneficiario_documento": {
+            "type": "string",
+            "description": "* Documento del beneficiario",
+            "example": "30123456789"
+          }
+        },
+        "required": ["cheque_id", "emisor_cuit", "beneficiario_documento"]
+      },
+      "CesionCOELSA": {
+        "type": "object",
+        "properties": {
+          "cheque_id": {
+            "type": "string",
+            "description": "* ID del cheque a ceder",
+            "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+          },
+          "cesionario_documento": {
+            "type": "string",
+            "description": "* Documento del cesionario",
+            "example": "40123456789"
+          },
+          "cesionario_nombre": {
+            "type": "string",
+            "description": "* Nombre del cesionario",
+            "example": "María García"
+          }
+        },
+        "required": ["cheque_id", "cesionario_documento", "cesionario_nombre"]
+      },
+      "NotificacionCOELSA": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID de la notificación",
+            "example": "notif_123456"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo de notificación",
+            "example": "cheque_emitido"
+          },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje de la notificación",
+            "example": "Cheque emitido exitosamente"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de la notificación",
+            "example": "2025-09-24T20:00:00Z"
+          }
+        }
+      },
+      "DevolucionCOELSA": {
+        "type": "object",
+        "properties": {
+          "cheque_id": {
+            "type": "string",
+            "description": "* ID del cheque a devolver",
+            "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Motivo de la devolución",
+            "example": "Fondos insuficientes"
+          },
+          "solicitante_cuit": {
+            "type": "string",
+            "description": "* CUIT del solicitante",
+            "example": "20123456789"
+          }
+        },
+        "required": ["cheque_id", "solicitante_cuit"]
+      },
+      "CertificadoCOELSA": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID del certificado",
+            "example": "cert_123456"
+          },
+          "emisor_cuit": {
+            "type": "string",
+            "description": "* CUIT del emisor",
+            "example": "20123456789"
+          },
+          "certificado_data": {
+            "type": "string",
+            "description": "* Datos del certificado",
+            "example": "certificado_data_base64"
+          },
+          "fecha_emision": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de emisión",
+            "example": "2025-09-24T20:00:00Z"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del certificado",
+            "example": "ACTIVO"
+          }
+        },
+        "required": ["emisor_cuit", "certificado_data"]
+      },
+      "AvalCOELSA": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID del aval",
+            "example": "aval_123456"
+          },
+          "cheque_id": {
+            "type": "string",
+            "description": "* ID del cheque a avalar",
+            "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+          },
+          "aval_cuit": {
+            "type": "string",
+            "description": "* CUIT del aval",
+            "example": "20123456789"
+          },
+          "solicitante_cuit": {
+            "type": "string",
+            "description": "* CUIT del solicitante",
+            "example": "30123456789"
+          },
+          "fecha_solicitud": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de solicitud",
+            "example": "2025-09-24T20:00:00Z"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del aval",
+            "example": "PENDIENTE"
+          }
+        },
+        "required": ["cheque_id", "aval_cuit", "solicitante_cuit"]
+      },
+      "MandatoCOELSA": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID del mandato",
+            "example": "mand_123456"
+          },
+          "mandante_cuit": {
+            "type": "string",
+            "description": "* CUIT del mandante",
+            "example": "20123456789"
+          },
+          "mandatario_cuit": {
+            "type": "string",
+            "description": "* CUIT del mandatario",
+            "example": "30123456789"
+          },
+          "cheque_id": {
+            "type": "string",
+            "description": "* ID del cheque",
+            "example": "36054d3f-4365-4bff-9980-8d9e5b55d9a7"
+          },
+          "tipo_mandato": {
+            "type": "string",
+            "description": "* Tipo de mandato",
+            "example": "cobro"
+          },
+          "fecha_creacion": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creación",
+            "example": "2025-09-24T20:00:00Z"
+          },
+          "estado": {
+            "type": "string",
+            "description": "Estado del mandato",
+            "example": "PENDIENTE"
+          }
+        },
+        "required": ["mandante_cuit", "mandatario_cuit", "cheque_id", "tipo_mandato"]
+      },
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Operación exitosa"
+          },
+          "data": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "responses": {
+      "SuccessResponse": {
+        "description": "Operación exitosa",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiResponse"
+            }
+          }
+        }
+      },
+      "BadRequestResponse": {
+        "description": "Solicitud incorrecta",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": false},
+                "message": {"type": "string", "example": "Error en la solicitud"},
+                "error": {"type": "string", "example": "BAD_REQUEST"},
+                "timestamp": {"type": "string", "format": "date-time"}
+              }
+            }
+          }
+        }
+      },
+      "UnauthorizedResponse": {
+        "description": "No autorizado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": false},
+                "message": {"type": "string", "example": "No autorizado"},
+                "error": {"type": "string", "example": "UNAUTHORIZED"},
+                "timestamp": {"type": "string", "format": "date-time"}
+              }
+            }
+          }
+        }
+      },
+      "InternalServerErrorResponse": {
+        "description": "Error interno del servidor",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {"type": "boolean", "example": false},
+                "message": {"type": "string", "example": "Error interno del servidor"},
+                "error": {"type": "string", "example": "INTERNAL_SERVER_ERROR"},
+                "timestamp": {"type": "string", "format": "date-time"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,109 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Production builds
+dist/
+build/
+*.tgz
+
+# Environment variables
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.*.local
+env.sandbox.example
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+logs/
+*.log
+screenlog.*
+screen-*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Excepción: permitir carpetas logs/ dentro de app/api (son rutas de Next.js, no archivos de log)
+!frontend/src/app/api/**/logs/
+!frontend/src/app/api/**/logs/**
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Yarn Integrity file
+.yarn-integrity
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+TEMP/
+
+# Test files
+test-*.js
+test-*.sh
+tests/playwright/test-*.js
+
+# Railway specific
+.railway/
+
+# Docker
+.dockerignore
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Changelog
+/changelog/
+
+# Commands
+/commands/
+
+# Prompts
+/prompts/
+
+# Trazabilidad
+/trazabilidad/

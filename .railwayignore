@@ -1,0 +1,12 @@
+.git
+node_modules
+*.log
+.env
+.env.*
+.DS_Store
+README.md
+*.md
+.gitignore
+docker-compose.yml
+start-sandbox.sh
+swagger.yaml

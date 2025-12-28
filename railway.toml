@@ -1,0 +1,15 @@
+[build]
+builder = "dockerfile"
+# Updated: 2025-01-17 - Force Railway deployment
+
+[deploy]
+startCommand = "yarn start"
+# healthcheckPath = "/health"  # Deshabilitado temporalmente - Railway no puede acceder al endpoint
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+
+[environments.production]
+variables = { NODE_ENV = "production", PORT = "3000" }
+
+[environments.development]
+variables = { NODE_ENV = "development", PORT = "3000" }

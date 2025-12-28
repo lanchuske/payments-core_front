@@ -1,0 +1,8 @@
+# ⚠️ REPOSITORIO LEGACY - NO USAR EN PRODUCCIÓN
+# Este repositorio está deprecado. Ver DEPRECATED.md y LEGACY_README.md
+
+# Nota: No ignoramos completamente sandbox/ para poder agregar advertencias de deprecación
+# pero los desarrolladores deben saber que este código NO se ejecuta en producción
+# config/
+# scripts/
+
