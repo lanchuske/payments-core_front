@@ -829,7 +829,8 @@ router.delete('/tenant-data/:tenantId', async (req, res) => {
     const { adminKey } = req.query;
 
     // Verificar clave de administrador
-    if (adminKey !== 'admin123') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador requerida',
@@ -972,7 +973,8 @@ router.get('/tenants', async (req, res) => {
   try {
     const { adminKey } = req.query;
 
-    if (adminKey !== 'admin123') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador requerida',
@@ -1024,7 +1026,8 @@ router.delete('/tenants/:tenantId', async (req, res) => {
     const { tenantId } = req.params;
     const { adminKey } = req.query;
 
-    if (adminKey !== 'admin1234') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador requerida',
@@ -1070,7 +1073,8 @@ router.get('/tenant-credentials/:tenantId', (req, res) => {
     const { tenantId } = req.params;
     const { adminKey } = req.query;
 
-    if (adminKey !== 'admin123') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador requerida',
@@ -1260,10 +1264,14 @@ router.get('/debug-panel', (req, res) => {
         }
         
         // Función para cargar tenants existentes
+        // NOTA: Este código se ejecuta en el navegador, no puede usar require()
+        // Para usar una clave personalizada, configurar window.ADMIN_KEY antes de llamar esta función
         async function loadExistingTenants() {
             alert('Loading tenants...');
             try {
-                const response = await fetch('/api/coelsa/tenants?adminKey=admin123');
+                // Usar window.ADMIN_KEY si está configurado, sino usar valor por defecto
+                const adminKey = window.ADMIN_KEY || 'admin1234';
+                const response = await fetch('/api/coelsa/tenants?adminKey=' + encodeURIComponent(adminKey));
                 const data = await response.json();
                 alert('Response: ' + JSON.stringify(data));
             } catch (error) {
@@ -3527,7 +3535,8 @@ router.get('/api-docs-old', (req, res) => {
                 return;
             }
             
-            if (adminKey !== 'admin123') {
+            const { validateAdminKey } = require('../utils/adminKey');
+            if (!validateAdminKey(adminKey)) {
                 showAlert('Clave de administrador incorrecta', 'error');
                 return;
             }

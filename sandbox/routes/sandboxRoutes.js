@@ -459,7 +459,8 @@ router.delete('/logs/clear', async (req, res) => {
     }
 
     const token = authHeader.substring(7);
-    if (token !== 'admin1234') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!validateAdminKey(token)) {
       return res.status(403).json({
         success: false,
         message: 'Clave de administrador incorrecta',
@@ -602,7 +603,8 @@ router.get('/tenants', async (req, res) => {
   try {
     const { adminKey } = req.query;
 
-    if (!adminKey || adminKey !== 'admin123') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!adminKey || !validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador requerida',
@@ -656,7 +658,8 @@ router.delete('/tenants/:tenantId', async (req, res) => {
     const { tenantId } = req.params;
     const { adminKey } = req.query;
 
-    if (!adminKey || adminKey !== 'admin123') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!adminKey || !validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador requerida',

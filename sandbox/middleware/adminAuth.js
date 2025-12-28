@@ -3,6 +3,8 @@
  * Verifica la clave de administrador para endpoints administrativos
  */
 
+const { validateAdminKey } = require('../utils/adminKey');
+
 const adminAuth = (req, res, next) => {
   try {
     // Verificar header X-Admin-Key
@@ -16,18 +18,8 @@ const adminAuth = (req, res, next) => {
       });
     }
 
-    // Verificar clave de administrador
-    const validAdminKey = process.env.ADMIN_KEY;
-    
-    if (!validAdminKey) {
-      return res.status(500).json({
-        success: false,
-        message: 'ADMIN_KEY environment variable is not configured',
-        error: 'MISSING_ADMIN_KEY_CONFIG'
-      });
-    }
-    
-    if (adminKey !== validAdminKey) {
+    // Verificar clave de administrador usando utilidad centralizada
+    if (!validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador inválida',

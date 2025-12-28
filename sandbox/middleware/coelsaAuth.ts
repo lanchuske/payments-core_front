@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { TenantSimple } from '../models/TenantSimple.simple';
+import { TenantSimple } from '../models/TenantSimple';
 
 // Interfaces para las requests
 interface CoelsaAuthRequest extends Request {
@@ -14,18 +14,10 @@ interface CoelsaAuthRequest extends Request {
     'x-tenant-id'?: string;
     'x-admin-key'?: string;
   };
-  tenant?: TenantSimple;
+  tenant?: InstanceType<typeof TenantSimple>;
   apiKey?: string;
   apiSecret?: string;
   tenantId?: string;
-}
-
-interface ApiResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
-  required_headers?: string[];
-  data?: any;
 }
 
 /**
@@ -46,7 +38,6 @@ const validateCoelsaApiKeys = async (req: CoelsaAuthRequest, res: Response, next
     const apiKey = req.headers['x-api-key'];
     const apiSecret = req.headers['x-api-secret'];
     const tenantId = req.headers['x-tenant-id'];
-    const adminKey = req.headers['x-admin-key'];
 
     console.log('🔍 [COELSA AUTH] API Key:', apiKey);
     console.log('🔍 [COELSA AUTH] API Secret:', apiSecret);
@@ -139,8 +130,8 @@ const validateCoelsaApiKeys = async (req: CoelsaAuthRequest, res: Response, next
 
     // Verificar credenciales del tenant
     const tenantCredentials = tenant.getSandboxCredentials();
-    const storedApiKey = tenantCredentials.api_key;
-    const storedApiSecret = tenantCredentials.api_secret;
+    const storedApiKey = tenantCredentials['api_key'];
+    const storedApiSecret = tenantCredentials['api_secret'];
 
     if (!storedApiKey || !storedApiSecret) {
       console.log('🔍 [COELSA AUTH] Credenciales no configuradas para el tenant');
@@ -297,7 +288,8 @@ const validateAdminKey = async (req: CoelsaAuthRequest, res: Response, next: Nex
     }
 
     // Verificar clave de administrador
-    if (adminKey !== 'admin123') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!validateAdminKey(adminKey)) {
       res.status(401).json({
         success: false,
         message: 'Clave de administrador inválida',
@@ -327,7 +319,8 @@ const validateApiOrAdmin = async (req: CoelsaAuthRequest, res: Response, next: N
 
     // Si hay clave de administrador, validarla
     if (adminKey) {
-      if (adminKey === 'admin123') {
+      const { validateAdminKey } = require('../utils/adminKey');
+      if (validateAdminKey(adminKey)) {
         console.log('🔍 [AUTH] Autenticación como administrador exitosa');
         next();
         return;

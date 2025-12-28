@@ -1,27 +1,29 @@
 /**
  * Middleware de Autenticación Simple
- * Solo requiere password admin1234
+ * Usa variable de entorno ADMIN_KEY con fallback a admin1234 para desarrollo
  */
+
+const { validateAdminKey } = require('../utils/adminKey');
 
 const simpleAuth = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const password = req.query.password || req.body.password;
   
   // Verificar password en header Authorization
-  if (authHeader && authHeader === 'admin1234') {
+  if (authHeader && validateAdminKey(authHeader)) {
     req.user = { role: 'ADMIN', id: 'admin' };
     return next();
   }
   
   // Verificar password en query o body
-  if (password === 'admin1234') {
+  if (password && validateAdminKey(password)) {
     req.user = { role: 'ADMIN', id: 'admin' };
     return next();
   }
   
   return res.status(401).json({
     success: false,
-    message: 'Acceso denegado. Se requiere password: admin1234',
+    message: 'Acceso denegado. Se requiere clave de administrador válida',
     error: 'UNAUTHORIZED'
   });
 };

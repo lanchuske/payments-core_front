@@ -25,7 +25,8 @@ router.get('/:tenantId', async (req, res) => {
     const { adminKey } = req.query;
 
     // Verificar autenticación administrativa
-    if (!adminKey || adminKey !== 'admin123') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!adminKey || !validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador requerida',
@@ -100,7 +101,8 @@ router.post('/:tenantId/regenerate', async (req, res) => {
     const { adminKey, notifyMain = false } = req.body;
 
     // Verificar autenticación administrativa
-    if (!adminKey || adminKey !== 'admin123') {
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!adminKey || !validateAdminKey(adminKey)) {
       return res.status(401).json({
         success: false,
         message: 'Clave de administrador requerida',

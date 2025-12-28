@@ -60,6 +60,18 @@ export const config = {
   },
 };
 
+/**
+ * Obtener la clave de administrador desde variables de entorno
+ * Prioridad: NEXT_PUBLIC_ADMIN_KEY > valor por defecto para desarrollo
+ */
+export function getAdminKey(): string {
+  if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_ADMIN_KEY) {
+    return process.env.NEXT_PUBLIC_ADMIN_KEY;
+  }
+  // Valor por defecto solo para desarrollo local
+  return 'admin1234';
+}
+
 // Función helper para obtener la URL completa de la API
 export const getApiUrl = (endpoint: string = '') => {
   const baseUrl = config.API_BASE_URL.endsWith('/') 

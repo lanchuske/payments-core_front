@@ -841,8 +841,10 @@ async function clearLogs() {
         return;
     }
     
-    if (adminKey !== 'admin1234') {
-        showAlert('Clave de administrador incorrecta', 'error');
+    // Validar clave de administrador (el backend valida, esto es solo UI)
+    // La validación real se hace en el backend
+    if (!adminKey) {
+        showAlert('Por favor ingresa la clave de administrador', 'error');
         return;
     }
     
@@ -908,7 +910,9 @@ async function createTenant(event) {
     };
     
     try {
-        const response = await fetch('/api/real/tenants?password=admin1234', {
+        // Usar la clave ingresada por el usuario o la del formulario
+        const adminPassword = document.getElementById('adminKey')?.value || 'admin1234';
+        const response = await fetch(`/api/real/tenants?password=${encodeURIComponent(adminPassword)}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -948,7 +952,9 @@ async function generateKeys(event) {
     }
     
     try {
-        const response = await fetch(`/api/real/tenants/${tenantId}/generate-keys?password=admin1234`, {
+        // Usar la clave ingresada por el usuario o la del formulario
+        const adminPassword = document.getElementById('adminKey')?.value || 'admin1234';
+        const response = await fetch(`/api/real/tenants/${tenantId}/generate-keys?password=${encodeURIComponent(adminPassword)}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

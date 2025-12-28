@@ -9,7 +9,7 @@ import {
   Tenant,
   Credentials,
 } from '@/types';
-import { getApiUrl } from './config';
+import { getApiUrl, getAdminKey } from './config';
 
 // Funciones para manejar credenciales COELSA (se mantienen para UI)
 export const getStoredCredentials = (): Credentials | null => {
@@ -275,10 +275,12 @@ export const apiService = {
   /**
    * Eliminar un tenant
    */
-  deleteTenant: async (tenantId: string, adminKey: string = 'admin1234') => {
+  deleteTenant: async (tenantId: string, adminKey?: string) => {
+    // Si no se proporciona adminKey, usar el valor por defecto desde config
+    const finalAdminKey = adminKey || getAdminKey();
     try {
       // Mover a papelera (desactivar) usando endpoint con clave de administrador
-      await nestjsApi.updateTenantStatusAdmin(tenantId, 'INACTIVE', adminKey);
+      await nestjsApi.updateTenantStatusAdmin(tenantId, 'INACTIVE', finalAdminKey);
       return {
         data: {
           success: true,
@@ -302,10 +304,12 @@ export const apiService = {
   /**
    * Restaurar un tenant
    */
-  restoreTenant: async (tenantId: string, adminKey: string = 'admin1234') => {
+  restoreTenant: async (tenantId: string, adminKey?: string) => {
+    // Si no se proporciona adminKey, usar el valor por defecto desde config
+    const finalAdminKey = adminKey || getAdminKey();
     try {
       // Restaurar tenant (activar) usando endpoint con clave de administrador
-      await nestjsApi.updateTenantStatusAdmin(tenantId, 'ACTIVE', adminKey);
+      await nestjsApi.updateTenantStatusAdmin(tenantId, 'ACTIVE', finalAdminKey);
       return {
         data: {
           success: true,
@@ -330,9 +334,11 @@ export const apiService = {
    * Eliminar permanentemente un tenant
    * Usa el endpoint DELETE /api/coelsa/tenants/:id/admin del sandbox
    */
-  permanentDeleteTenant: async (tenantId: string, adminKey: string = 'admin1234') => {
+  permanentDeleteTenant: async (tenantId: string, adminKey?: string) => {
+    // Si no se proporciona adminKey, usar el valor por defecto desde config
+    const finalAdminKey = adminKey || getAdminKey();
     try {
-      const result = await nestjsApi.deleteTenantAdmin(tenantId, adminKey);
+      const result = await nestjsApi.deleteTenantAdmin(tenantId, finalAdminKey);
       return { data: result };
     } catch (error: unknown) {
       console.error('Error permanently deleting tenant:', error);

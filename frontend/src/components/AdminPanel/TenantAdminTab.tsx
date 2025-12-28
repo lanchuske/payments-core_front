@@ -5,6 +5,7 @@ import { Tenant, Credentials } from '@/types';
 import { apiService, setStoredCredentials } from '@/lib/api-migrated';
 import { copyToClipboard } from '@/lib/utils';
 import { useToast } from '@/hooks/useToast';
+import { getAdminKey } from '@/lib/config';
 
 interface TenantAdminTabProps {
   onCredentialsGenerated?: (credentials: Credentials) => void;
@@ -21,7 +22,8 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   const { showSuccess, showError, showToast } = useToast();
 
   const handleLoadTenants = async (mode: 'active' | 'trash' = 'active') => {
-    if (adminKey !== 'admin1234') {
+    const validAdminKey = getAdminKey();
+    if (adminKey !== validAdminKey) {
       showError('Clave de administrador incorrecta');
       return;
     }
@@ -74,7 +76,8 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   };
 
   const handleLoadTenantCredentials = async (tenant: Tenant) => {
-    if (adminKey !== 'admin1234') {
+    const validAdminKey = getAdminKey();
+    if (adminKey !== validAdminKey) {
       showError('Clave de administrador incorrecta');
       return;
     }
@@ -244,7 +247,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="mb-2 text-2xl font-bold text-gray-900">
           🔐 Administración de Tenants
         </h2>
         <p className="text-gray-800">
@@ -253,9 +256,9 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
       </div>
 
       {/* Sección de Autenticación de Admin */}
-      <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+      <div className="p-6 bg-red-50 rounded-lg border-2 border-red-200">
         <div className="flex items-center mb-4">
-          <span className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
+          <span className="flex justify-center items-center mr-3 w-8 h-8 text-sm font-bold text-white bg-red-500 rounded-full">
             🔒
           </span>
           <h3 className="text-lg font-semibold text-red-800">
@@ -263,28 +266,28 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
           </h3>
         </div>
         
-        <p className="text-red-700 mb-4">
+        <p className="mb-4 text-red-700">
           Esta sección requiere credenciales de administrador para acceder a la gestión de tenants y credenciales del sistema.
         </p>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-red-700 mb-2">
+            <label className="block mb-2 text-sm font-medium text-red-700">
               Clave de Administrador:
             </label>
-            <div className="flex items-center gap-4">
+            <div className="flex gap-4 items-center">
               <input
                 type="password"
                 placeholder="Ingresa la clave de administrador"
                 value={adminKey || ''}
                 onChange={e => setAdminKey(e.target.value)}
                 onKeyPress={handleAdminKeyPress}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={() => handleLoadTenants('active')}
                 disabled={loading || !adminKey}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 text-white bg-red-600 rounded-md transition-colors hover:bg-red-700 disabled:opacity-50"
               >
                 {loading ? '⏳ Cargando...' : '🔐 Acceder'}
               </button>
@@ -298,14 +301,14 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
         console.log('🔍 [DEBUG] Renderizado - isAuthenticated:', isAuthenticated, 'tenantsList.length:', tenantsList.length);
         return isAuthenticated && tenantsList.length > 0;
       })() && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
+        <div className="p-6 bg-white rounded-lg border border-gray-200">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-4 items-center">
               <h3 className="text-lg font-semibold text-gray-900">
                 {viewMode === 'active' ? '📋 Tenants Activos' : '🗑️ Papelera'} ({tenantsList.length})
               </h3>
               {/* Toggle entre Activos y Papelera */}
-              <div className="flex bg-gray-100 rounded-md p-1">
+              <div className="flex p-1 bg-gray-100 rounded-md">
                 <button
                   onClick={() => handleLoadTenants('active')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
@@ -335,7 +338,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                   setGeneratedCredentials(null);
                   setSelectedTenant(null);
                 }}
-                className="px-3 py-1 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
+                className="px-3 py-1 text-sm text-white bg-gray-500 rounded-md transition-colors hover:bg-gray-600"
               >
                 🔄 Limpiar
               </button>
@@ -347,14 +350,14 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                   setGeneratedCredentials(null);
                   setSelectedTenant(null);
                 }}
-                className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors text-sm"
+                className="px-3 py-1 text-sm text-white bg-red-500 rounded-md transition-colors hover:bg-red-600"
               >
                 🚪 Cerrar Sesión
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {tenantsList.map(tenant => (
               <div
                 key={tenant.id}
@@ -364,18 +367,18 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                     : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                 }`}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <h4 className="font-semibold text-gray-900 text-sm">
+                <div className="flex justify-between items-start mb-3">
+                  <h4 className="text-sm font-semibold text-gray-900">
                     {tenant.name}
                   </h4>
                   {selectedTenant?.id === tenant.id && (
-                    <span className="px-2 py-1 bg-blue-500 text-white text-xs rounded-full">
+                    <span className="px-2 py-1 text-xs text-white bg-blue-500 rounded-full">
                       Activo
                     </span>
                   )}
                 </div>
                 
-                <div className="space-y-1 text-xs text-gray-800 mb-3">
+                <div className="mb-3 space-y-1 text-xs text-gray-800">
                   <p><strong>ID:</strong> <span className="font-mono">{tenant.id}</span></p>
                   <p><strong>Código:</strong> {tenant.code}</p>
                   <p><strong>CUIT:</strong> {tenant.cuit}</p>
@@ -390,14 +393,14 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                       <button
                         onClick={() => handleLoadTenantCredentials(tenant)}
                         disabled={loading}
-                        className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                        className="flex-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md transition-colors hover:bg-blue-700 disabled:opacity-50"
                       >
                         {loading && selectedTenant?.id === tenant.id ? '⏳ Cargando...' : '🔑 Obtener Credenciales'}
                       </button>
                       <button
                         onClick={() => handleDeleteTenant(tenant)}
                         disabled={loading}
-                        className="px-3 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                        className="px-3 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md transition-colors hover:bg-yellow-700 disabled:opacity-50"
                         title="Mover a papelera"
                       >
                         🗑️
@@ -408,7 +411,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                       <button
                         onClick={() => handleRestoreTenant(tenant)}
                         disabled={loading}
-                        className="flex-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                        className="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md transition-colors hover:bg-green-700 disabled:opacity-50"
                         title="Restaurar tenant"
                       >
                         ♻️ Restaurar
@@ -416,7 +419,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                       <button
                         onClick={() => handlePermanentDeleteTenant(tenant)}
                         disabled={loading}
-                        className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                        className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md transition-colors hover:bg-red-700 disabled:opacity-50"
                         title="Eliminar permanentemente"
                       >
                         ❌
@@ -432,68 +435,68 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
 
       {/* Credenciales Generadas */}
       {generatedCredentials && selectedTenant && (
-        <div id="admin-generated-credentials" className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-xl shadow-xl p-6">
+        <div id="admin-generated-credentials" className="p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-300 shadow-xl">
           <div className="flex items-center mb-4">
-            <span className="text-2xl mr-3">🎉</span>
+            <span className="mr-3 text-2xl">🎉</span>
             <h3 className="text-xl font-bold text-green-800">
               Credenciales del Tenant: {selectedTenant.name}
             </h3>
           </div>
           
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-            <p className="text-yellow-800 text-sm">
+          <div className="p-3 mb-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <p className="text-sm text-yellow-800">
               <strong>⚠️ Confidencial:</strong> Estas credenciales son específicas del tenant seleccionado. 
               Manéjalas con cuidado y no las compartas con usuarios no autorizados.
             </p>
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-blue-200 shadow-md">
+            <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-blue-200 shadow-md">
               <div className="flex-1 mr-4">
-                <label className="text-sm font-bold text-blue-700 flex items-center mb-2">
+                <label className="flex items-center mb-2 text-sm font-bold text-blue-700">
                   🔑 API Key
                 </label>
-                <code className="block text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border break-all">
+                <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
                   {generatedCredentials.apiKey}
                 </code>
               </div>
               <button
                 onClick={() => copyToClipboard(generatedCredentials.apiKey, showToast)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 text-sm font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-blue-700 hover:shadow-lg hover:scale-105"
               >
                 📋 Copiar
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-purple-200 shadow-md">
+            <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-purple-200 shadow-md">
               <div className="flex-1 mr-4">
-                <label className="text-sm font-bold text-purple-700 flex items-center mb-2">
+                <label className="flex items-center mb-2 text-sm font-bold text-purple-700">
                   🔐 API Secret
                 </label>
-                <code className="block text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border break-all">
+                <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
                   {generatedCredentials.apiSecret}
                 </code>
               </div>
               <button
                 onClick={() => copyToClipboard(generatedCredentials.apiSecret, showToast)}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 text-sm font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-purple-700 hover:shadow-lg hover:scale-105"
               >
                 📋 Copiar
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-green-200 shadow-md">
+            <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-green-200 shadow-md">
               <div className="flex-1 mr-4">
-                <label className="text-sm font-bold text-green-700 flex items-center mb-2">
+                <label className="flex items-center mb-2 text-sm font-bold text-green-700">
                   🏢 Tenant ID
                 </label>
-                <code className="block text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border break-all">
+                <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
                   {generatedCredentials.tenantId}
                 </code>
               </div>
               <button
                 onClick={() => copyToClipboard(generatedCredentials.tenantId, showToast)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-sm font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-green-700 hover:shadow-lg hover:scale-105"
               >
                 📋 Copiar
               </button>
@@ -507,7 +510,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                 const allCredentials = `API Key: ${generatedCredentials.apiKey}\nAPI Secret: ${generatedCredentials.apiSecret}\nTenant ID: ${generatedCredentials.tenantId}`;
                 copyToClipboard(allCredentials, showToast);
               }}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="px-6 py-3 font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg transition-all duration-200 transform hover:from-blue-700 hover:to-purple-700 hover:shadow-xl hover:scale-105"
             >
               📋 Copiar Todas las Credenciales
             </button>
