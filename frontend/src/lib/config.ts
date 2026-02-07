@@ -6,14 +6,18 @@
 // Estas se pasan como build args al Dockerfile o se configuran en .env.local para desarrollo local
 
 // Función para obtener la URL base de la API
-// REQUIERE: Variable de entorno NEXT_PUBLIC_API_URL (configurar en .env.local para desarrollo)
+// En desarrollo, si no hay .env.local, usa mismo origen (cuando Express sirve front en 3004)
 function getApiBaseUrl(): string {
   if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  
-  // Si no está definida, lanzar error (no usar fallbacks)
-  throw new Error('NEXT_PUBLIC_API_URL no está definida. Configúrala en .env.local para desarrollo.');
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api/coelsa`;
+  }
+  if (process.env?.NODE_ENV === 'development') {
+    return 'http://localhost:3004/api/coelsa';
+  }
+  throw new Error('NEXT_PUBLIC_API_URL no está definida. Configúrala en .env.local y vuelve a hacer build.');
 }
 
 export const config = {
@@ -37,26 +41,27 @@ export const config = {
   },
   
   // URL base del frontend (Next.js)
-  // ⚠️ IMPORTANTE: Usar NEXT_PUBLIC_FRONTEND_URL durante el build
   get FRONTEND_URL() {
-    // REQUIERE: Variable de entorno NEXT_PUBLIC_FRONTEND_URL (configurar en .env.local para desarrollo)
     if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_FRONTEND_URL) {
       return process.env.NEXT_PUBLIC_FRONTEND_URL;
     }
-    
-    // Si no está definida, lanzar error (no usar fallbacks)
-    throw new Error('NEXT_PUBLIC_FRONTEND_URL no está definida. Configúrala en .env.local para desarrollo.');
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    if (process.env?.NODE_ENV === 'development') {
+      return 'http://localhost:3004';
+    }
+    throw new Error('NEXT_PUBLIC_FRONTEND_URL no está definida. Configúrala en .env.local y vuelve a hacer build.');
   },
   
   // Configuración de desarrollo
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
   
-  // Puerto único (Next.js) - REQUIERE variable de entorno PORT (configurar en .env.local para desarrollo)
   get PORT() {
     if (typeof process !== 'undefined' && process.env?.PORT) {
       return process.env.PORT;
     }
-    throw new Error('PORT no está definida. Configúrala en .env.local para desarrollo.');
+    return '3005';
   },
 };
 

@@ -10,8 +10,9 @@ const nextConfig: NextConfig = {
     // Deshabilitar verificación de tipos durante el build
     ignoreBuildErrors: true,
   },
-  // Configuración para producción con API Routes
-  output: 'standalone',
+  // 'export' genera frontend/out para que Express (sandbox) sirva estático en local.
+  // Para despliegue solo-Next (ej. Vercel) usar 'standalone' y no depender de Express.
+  output: 'export',
   trailingSlash: false,
   images: {
     unoptimized: true,

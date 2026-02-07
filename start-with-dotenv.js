@@ -2,11 +2,18 @@
 
 /**
  * Script de inicio con dotenv para ECHEQ Sandbox
- * Carga las variables de entorno desde archivo .env
- * Siguiendo el patrón del backend para Railway deployment
+ * Carga las variables de entorno desde .env (y .env.local si existe) en la raíz del proyecto.
+ * Usa __dirname para que funcione igual desde cualquier directorio de trabajo.
  */
 
-require('dotenv').config();
+const path = require('path');
+
+const projectRoot = path.resolve(__dirname);
+const envPath = path.join(projectRoot, '.env');
+const envLocalPath = path.join(projectRoot, '.env.local');
+
+require('dotenv').config({ path: envPath });
+require('dotenv').config({ path: envLocalPath, override: true });
 
 // Verificar que las variables críticas estén cargadas
 const requiredVars = [
@@ -17,20 +24,32 @@ const requiredVars = [
 ];
 
 const optionalVars = [
+  'ADMIN_KEY',
+  'ADMIN_PASSWORD',
   'CORS_ORIGIN',
   'RATE_LIMIT_MAX',
   'RATE_LIMIT_WINDOW',
   'REDIS_URL',
+  'REDIS_ENABLED',
   'LOG_LEVEL',
   'SANDBOX_MODE',
   'ENABLE_SIMULATION',
-  // COELSA credentials son opcionales - se configuran por banco en BD
+  'APPLICATIONINSIGHTS_CONNECTION_STRING',
+  'SANDBOX_URL',
+  'FRONTEND_URL',
   'COELSA_API_KEY',
   'COELSA_API_SECRET',
   'COELSA_API_URL',
 ];
 
-console.log('🔧 Variables de entorno cargadas desde .env');
+const fs = require('fs');
+if (!fs.existsSync(envPath) && !fs.existsSync(envLocalPath)) {
+  console.warn('⚠️  No se encontró .env ni .env.local en ' + projectRoot);
+  console.warn('   Crea .env con: cp .env.example .env');
+  console.warn('   Luego edita .env con DATABASE_URL, JWT_SECRET, etc.\n');
+}
+
+console.log('🔧 Variables de entorno (desde ' + projectRoot + ')');
 console.log('📋 Variables críticas:');
 
 requiredVars.forEach(varName => {

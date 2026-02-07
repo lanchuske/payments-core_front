@@ -23,6 +23,9 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
 
   const handleLoadTenants = async (mode: 'active' | 'trash' = 'active') => {
     const validAdminKey = getAdminKey();
+    console.log('🔍 [DEBUG] Clave ingresada:', adminKey);
+    console.log('🔍 [DEBUG] Clave esperada:', validAdminKey);
+    console.log('🔍 [DEBUG] Comparación:', adminKey === validAdminKey);
     if (adminKey !== validAdminKey) {
       showError('Clave de administrador incorrecta');
       return;
