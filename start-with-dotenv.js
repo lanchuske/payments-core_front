@@ -6,6 +6,8 @@
  * Usa __dirname para que funcione igual desde cualquier directorio de trabajo.
  */
 
+/* eslint-disable no-console -- Script CLI de arranque; la salida por consola es intencional */
+
 const path = require('path');
 
 const projectRoot = path.resolve(__dirname);
@@ -16,12 +18,7 @@ require('dotenv').config({ path: envPath });
 require('dotenv').config({ path: envLocalPath, override: true });
 
 // Verificar que las variables críticas estén cargadas
-const requiredVars = [
-  'NODE_ENV',
-  'PORT',
-  'DATABASE_URL',
-  'JWT_SECRET',
-];
+const requiredVars = ['NODE_ENV', 'PORT', 'DATABASE_URL', 'JWT_SECRET'];
 
 const optionalVars = [
   'ADMIN_KEY',
