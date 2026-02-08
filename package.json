@@ -10,6 +10,7 @@
     "dev:all": "npx concurrently \"yarn dev:backend\" \"yarn dev:frontend\"",
     "start:backend": "node start-with-dotenv.js",
     "start:frontend": "cd frontend && yarn build && yarn start",
+    "predev": "./scripts/kill-ports.sh",
     "dev": "npx concurrently \"yarn dev:backend\" \"cd frontend && yarn dev\"",
     "dev:backend": "nodemon start-with-dotenv.js",
     "dev:frontend": "cd frontend && yarn dev",

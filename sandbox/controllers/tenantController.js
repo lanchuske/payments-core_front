@@ -426,6 +426,30 @@ class TenantController {
         );
     }
   }
+
+  /**
+   * Obtener credenciales del sandbox de un tenant
+   * GET /api/coelsa/tenants/:tenantId/credentials
+   */
+  async getTenantCredentials(req, res) {
+    try {
+      const { tenantId } = req.params;
+      const result = await tenantService.getTenantCredentials(tenantId);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Error en getTenantCredentials controller:', error);
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            false,
+            error.message || 'Tenant no encontrado',
+            null,
+            'TENANT_NOT_FOUND'
+          )
+        );
+    }
+  }
 }
 
 module.exports = new TenantController();

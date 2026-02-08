@@ -12,13 +12,14 @@ import { TransactionsTab } from './TransactionsTab';
 import { TransfersTab } from './TransfersTab';
 import { PaymentLinksTab } from './PaymentLinksTab';
 import { DebitsTab } from './DebitsTab';
+import { AccountsTab } from './AccountsTab';
 import { ReconciliationTab } from './ReconciliationTab';
 import { ReportsTab } from './ReportsTab';
 import { TenantSelector } from './TenantSelector';
 import { ToastProvider, useToastContext } from '@/contexts/ToastContext';
 import { ToastItem } from '@/components/Toast/ToastItem';
 
-type TabType = 'credentials' | 'transactions' | 'transfers' | 'payment-links' | 'debits' | 'reconciliation' | 'reports' | 'testing' | 'docs' | 'logs' | 'data' | 'admin';
+type TabType = 'credentials' | 'transactions' | 'transfers' | 'payment-links' | 'debits' | 'accounts' | 'reconciliation' | 'reports' | 'testing' | 'docs' | 'logs' | 'data' | 'admin';
 
 // Componente interno que usa el contexto
 function AdminPanelContent() {
@@ -49,6 +50,7 @@ function AdminPanelContent() {
     { id: 'transfers', label: 'Transferencias', icon: '🔄' },
     { id: 'payment-links', label: 'Payment Links', icon: '🔗' },
     { id: 'debits', label: 'Débitos Automáticos', icon: '📅' },
+    { id: 'accounts', label: 'Cuentas', icon: '🏦' },
     { id: 'reconciliation', label: 'Conciliación', icon: '📊' },
     { id: 'reports', label: 'Reportes', icon: '📈' },
     { id: 'testing', label: 'Testing APIs', icon: '🧪' },
@@ -134,6 +136,7 @@ function AdminPanelContent() {
                 {activeTab === 'transfers' && <TransfersTab />}
                 {activeTab === 'payment-links' && <PaymentLinksTab />}
                 {activeTab === 'debits' && <DebitsTab />}
+                {activeTab === 'accounts' && <AccountsTab />}
                 {activeTab === 'reconciliation' && <ReconciliationTab />}
                 {activeTab === 'reports' && <ReportsTab />}
                 {activeTab === 'testing' && (

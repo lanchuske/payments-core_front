@@ -449,10 +449,10 @@ router.post('/generate-keys/:tenantId', async (req, res) => {
 });
 
 /**
- * POST /create-tenant
- * Endpoint público para crear tenant desde el panel de administración
+ * POST /tenants/public
+ * Crear tenant (compatible con cliente NestJS que llama a /tenants/public)
  */
-router.post('/create-tenant', async (req, res) => {
+router.post('/tenants/public', async (req, res) => {
   try {
     const tenantController = require('../controllers/tenantController');
     await tenantController.createTenant(req, res);
@@ -466,10 +466,27 @@ router.post('/create-tenant', async (req, res) => {
 });
 
 /**
- * POST /generate-keys/:tenantId
- * Endpoint público para generar API keys desde el panel de administración
+ * GET /tenants/:tenantId/credentials
+ * Obtener credenciales del tenant (estilo NestJS)
  */
-router.post('/generate-keys/:tenantId', async (req, res) => {
+router.get('/tenants/:tenantId/credentials', async (req, res) => {
+  try {
+    const tenantController = require('../controllers/tenantController');
+    await tenantController.getTenantCredentials(req, res);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * POST /tenants/:tenantId/credentials
+ * Generar API keys del tenant (estilo NestJS)
+ */
+router.post('/tenants/:tenantId/credentials', async (req, res) => {
   try {
     const tenantController = require('../controllers/tenantController');
     req.params.id = req.params.tenantId;
@@ -967,8 +984,25 @@ router.get('/debug-tenant/:id', async (req, res) => {
 /**
  * GET /tenants
  * Listar todos los tenants (requiere clave de administrador)
- * ✅ MIGRADO: Ahora usa BFF API en lugar de acceso directo a BD
+ * Intenta BFF primero; si falla (404, BFF no disponible), usa BD local del sandbox.
  */
+function formatTenantForFrontend(tenant) {
+  const t = tenant && typeof tenant.get === 'function' ? tenant.get({ plain: true }) : tenant;
+  const id = t.id || t.tenantId;
+  const name = t.name || t.tenantName;
+  const code = t.code || t.tenantId;
+  return {
+    id,
+    name,
+    code,
+    description: t.description || name,
+    cuit: t.cuit || t.taxId || (code ? String(code).replace(/[^0-9]/g, '').padStart(11, '20') : '20123456789'),
+    status: t.status === 'ACTIVE' || t.is_active === true ? 'active' : 'inactive',
+    created_at: t.createdAt || t.created_at,
+    createdAt: t.createdAt || t.created_at,
+  };
+}
+
 router.get('/tenants', async (req, res) => {
   try {
     const { adminKey } = req.query;
@@ -981,31 +1015,40 @@ router.get('/tenants', async (req, res) => {
       });
     }
 
-    // Usar BFF API en lugar de acceso directo a BD
-    const bffClient = require('../services/bffClient');
-    const { formatErrorResponse } = require('../utils/errorHandler');
-    
-    const response = await bffClient.getTenants({
-      page: req.query.page || 1,
-      limit: req.query.limit || 100,
-    });
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 100;
+    let formattedTenants = [];
+    let total = 0;
 
-    // Formatear respuesta para mantener compatibilidad con el frontend
-    const formattedTenants = (response.data || []).map(tenant => ({
-      id: tenant.id,
-      name: tenant.name || tenant.tenantName,
-      code: tenant.code || tenant.tenantId,
-      description: tenant.description || tenant.name || tenant.tenantName,
-      cuit: tenant.cuit || tenant.taxId || (tenant.code ? tenant.code.replace(/[^0-9]/g, '').padStart(11, '20') : '20123456789'),
-      status: tenant.status === 'ACTIVE' || tenant.isActive ? 'active' : 'inactive',
-      created_at: tenant.createdAt || tenant.created_at,
-      createdAt: tenant.createdAt || tenant.created_at,
-    }));
+    try {
+      const bffClient = require('../services/bffClient');
+      const response = await bffClient.getTenants({ page, limit });
+      const list = response.data || [];
+      total = response.total ?? list.length;
+      formattedTenants = list.map(t => formatTenantForFrontend(t));
+    } catch (bffError) {
+      // Fallback: listar desde BD local del sandbox (BFF no disponible o sin GET /tenants)
+      const status = bffError.response?.status;
+      if (status === 404 || status === 502 || status === 503 || bffError.code === 'ECONNREFUSED') {
+        const tenantService = require('../services/tenantService');
+        const result = await tenantService.listTenants({
+          page,
+          limit,
+          sortBy: 'createdAt',
+          sortOrder: 'DESC',
+        });
+        const rows = result.data?.tenants || [];
+        total = result.data?.pagination?.total ?? rows.length;
+        formattedTenants = rows.map(t => formatTenantForFrontend(t));
+      } else {
+        throw bffError;
+      }
+    }
 
     res.json({
       success: true,
       data: formattedTenants,
-      total: response.total || formattedTenants.length,
+      total,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToastContext } from '@/contexts/ToastContext';
 import { nestjsApi } from '@/lib/api/nestjs-client';
+import { getAdminKey } from '@/lib/config';
 
 interface Transaction {
   id: string;
@@ -19,7 +20,9 @@ interface Transaction {
 
 export function TransactionsTab() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [adminKey, setAdminKey] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState({
     type: '',
@@ -32,6 +35,8 @@ export function TransactionsTab() {
   const { showWarning, showError } = useToastContext();
 
   const loadTransactions = useCallback(async () => {
+    if (!isAuthenticated || !adminKey) return;
+
     try {
       setLoading(true);
       // Obtener tenantId del localStorage (se guarda cuando se generan credenciales)
@@ -55,6 +60,7 @@ export function TransactionsTab() {
         status: filters.status || undefined,
         limit: filters.limit,
         page,
+        adminKey,
       });
       
       if (response.success && response.data) {
@@ -105,11 +111,22 @@ export function TransactionsTab() {
     } finally {
       setLoading(false);
     }
-  }, [filters, page, showWarning, showError]);
+  }, [filters, page, showWarning, showError, isAuthenticated, adminKey]);
+
+  const handleAcceder = () => {
+    const validAdminKey = getAdminKey();
+    if (adminKey !== validAdminKey) {
+      showError('Clave de administrador incorrecta');
+      return;
+    }
+    setIsAuthenticated(true);
+  };
 
   useEffect(() => {
-    loadTransactions();
-  }, [loadTransactions]);
+    if (isAuthenticated && adminKey) {
+      loadTransactions();
+    }
+  }, [loadTransactions, isAuthenticated, adminKey]);
 
   // Escuchar cambios de tenant
   useEffect(() => {
@@ -152,16 +169,71 @@ export function TransactionsTab() {
     return icons[type] || '💵';
   };
 
+  // Acceso restringido: pedir clave de administrador
+  if (!isAuthenticated) {
+    return (
+      <div className="p-6 bg-red-50 rounded-lg border border-red-200">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="flex justify-center items-center w-8 h-8 text-sm font-bold text-white bg-red-500 rounded-full">
+            🔒
+          </span>
+          <h3 className="text-lg font-semibold text-red-800">
+            Acceso Restringido - Solo Administradores
+          </h3>
+        </div>
+        <p className="mb-4 text-red-700">
+          Esta sección requiere la clave de administrador para ver las transacciones.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block mb-2 text-sm font-medium text-red-700">
+              Clave de Administrador:
+            </label>
+            <div className="flex gap-4 items-center">
+              <input
+                type="password"
+                placeholder="Ingresa la clave de administrador"
+                value={adminKey}
+                onChange={(e) => setAdminKey(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAcceder()}
+                className="flex-1 px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleAcceder}
+                disabled={loading || !adminKey}
+                className="px-4 py-2 text-white bg-red-600 rounded-md transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {loading ? '⏳ Cargando...' : '🔐 Acceder'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Transacciones</h2>
-        <button
-          onClick={loadTransactions}
-          className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700"
-        >
-          🔄 Actualizar
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={loadTransactions}
+            className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700"
+          >
+            🔄 Actualizar
+          </button>
+          <button
+            onClick={() => {
+              setIsAuthenticated(false);
+              setAdminKey('');
+              setTransactions([]);
+            }}
+            className="px-4 py-2 text-white bg-gray-500 rounded-lg transition-colors hover:bg-gray-600"
+          >
+            🚪 Cerrar Sesión
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}

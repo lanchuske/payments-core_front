@@ -35,8 +35,8 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
 
     try {
       const result = mode === 'active' 
-        ? await apiService.getActiveTenants()
-        : await apiService.getInactiveTenants();
+        ? await apiService.getActiveTenants(adminKey)
+        : await apiService.getInactiveTenants(adminKey);
 
       console.log('🔍 [DEBUG] Resultado de getActiveTenants/getInactiveTenants:', result);
 
@@ -85,11 +85,17 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
       return;
     }
 
+    const tenantId = (tenant as Tenant & { tenantId?: string }).id || (tenant as Tenant & { tenantId?: string }).tenantId;
+    if (!tenantId || tenantId === 'tenantId') {
+      showError('ID del tenant no disponible');
+      return;
+    }
+
     setLoading(true);
     setSelectedTenant(tenant);
 
     try {
-      const result = await apiService.getTenantCredentials(tenant.id);
+      const result = await apiService.getTenantCredentials(tenantId);
 
       if (result.data.success && 'data' in result.data && result.data.data) {
         const responseData = result.data.data as Record<string, unknown>;
@@ -150,7 +156,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   };
 
   const handleDeleteTenant = async (tenant: Tenant) => {
-    if (adminKey !== 'admin1234') {
+    if (adminKey !== getAdminKey()) {
       showError('Clave de administrador incorrecta');
       return;
     }
@@ -181,7 +187,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   };
 
   const handleRestoreTenant = async (tenant: Tenant) => {
-    if (adminKey !== 'admin1234') {
+    if (adminKey !== getAdminKey()) {
       showError('Clave de administrador incorrecta');
       return;
     }
@@ -212,7 +218,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   };
 
   const handlePermanentDeleteTenant = async (tenant: Tenant) => {
-    if (adminKey !== 'admin1234') {
+    if (adminKey !== getAdminKey()) {
       showError('Clave de administrador incorrecta');
       return;
     }

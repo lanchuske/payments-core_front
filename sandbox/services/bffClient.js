@@ -12,8 +12,9 @@ const logger = require('./logger');
 
 class BFFClient {
   constructor() {
-    // URL del BFF desde variables de entorno
-    this.baseURL = process.env.CORE_BFF_URL || 'http://localhost:3002';
+    // URL del BFF; Nest usa globalPrefix 'api/coelsa', por eso las rutas son /api/coelsa/tenants, etc.
+    const bffOrigin = process.env.CORE_BFF_URL || 'http://localhost:3002';
+    this.baseURL = bffOrigin.replace(/\/$/, '') + '/api/coelsa';
     this.timeout = parseInt(process.env.CORE_BFF_TIMEOUT || '30000');
     
     // Cache para tokens y tenant IDs por request

@@ -922,14 +922,6 @@ app.post('/api/coelsa/simulate', async (req, res) => {
 // Importar y montar rutas COELSA
 const coelsaRoutes = require('./routes/coelsaRoutes');
 
-// Importar y montar rutas de simulación COELSA (opcional - archivo puede no existir)
-let simulateCoelsaRoutes = null;
-try {
-  simulateCoelsaRoutes = require('./scripts/simulate-coelsa');
-} catch (error) {
-  console.log('⚠️  Rutas de simulación COELSA no disponibles (archivo no encontrado)');
-}
-
 // Importar y montar rutas de tenants
 const tenantRoutes = require('./routes/tenants');
 
@@ -947,6 +939,32 @@ const echeqRoutes = require('./routes/echeqs');
 
 // Importar rutas de autenticación
 const authRoutes = require('./routes/auth');
+
+const axios = require('axios');
+
+// Proxy /api/coelsa/api/* al NestJS core-bff (transacciones, etc.). Nest usa globalPrefix 'api/coelsa', ruta = /api/coelsa/api/transactions
+const CORE_BFF_URL = process.env.CORE_BFF_URL || 'http://localhost:3002';
+app.use('/api/coelsa/api', (req, res) => {
+  // Conservar query string (tenantId, adminKey, etc.) para que el core-bff reciba adminKey
+  const targetUrl = `${CORE_BFF_URL}${req.originalUrl}`;
+  axios({
+    method: req.method,
+    url: targetUrl,
+    data: req.body,
+    headers: {
+      'content-type': req.headers['content-type'] || 'application/json',
+      ...(req.headers.authorization && { authorization: req.headers.authorization }),
+    },
+    validateStatus: () => true,
+  })
+    .then((axiosRes) => {
+      res.status(axiosRes.status).set(axiosRes.headers).send(axiosRes.data);
+    })
+    .catch((err) => {
+      logger.error('Proxy api/coelsa/api error:', err.message);
+      res.status(502).json({ success: false, message: 'Proxy error to core-bff', error: err.message });
+    });
+});
 
 // Montar rutas COELSA en /api/coelsa
 // Rutas COELSA oficiales (implementación completa)
@@ -968,7 +986,6 @@ app.use('/api/sync', syncRoutes);
 const realTenantsSimple = require('./routes/realTenantsSimple');
 app.use('/api/real', realTenantsSimple);
 
-// Nota: simulateCoelsaRoutes removido - no es parte de COELSA oficial
 
 // Montar rutas de tenants en /api/tenants
 app.use('/api/tenants', tenantRoutes);

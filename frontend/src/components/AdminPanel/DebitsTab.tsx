@@ -188,9 +188,16 @@ export function DebitsTab() {
       }
     } catch (error: unknown) {
       console.error('Error creating debit mandate:', error);
-      const errorMessage = (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message 
-        || (error as { message?: string })?.message 
-        || 'Error al crear el mandato de débito. Verifica los datos e intenta nuevamente.';
+      const ax = error as { response?: { status?: number; data?: { message?: string; error?: string; errors?: Array<{ field: string; errors: string[] }> } }; message?: string };
+      const data = ax?.response?.data;
+      const status = ax?.response?.status;
+      let errorMessage = data?.message || data?.error || ax?.message || 'Error al crear el mandato de débito. Verifica los datos e intenta nuevamente.';
+      if (data?.errors?.length) {
+        const details = data.errors.map((e: { field: string; errors: string[] }) => `${e.field}: ${e.errors.join(', ')}`).join('; ');
+        errorMessage = `${data.message || 'Validación fallida'}: ${details}`;
+      } else if (status === 500) {
+        errorMessage = (data?.message || data?.error || errorMessage) + ' (Comprueba que los IDs de cuenta deudora y acreedora existan para este tenant.)';
+      }
       showError(errorMessage);
     } finally {
       setLoading(false);

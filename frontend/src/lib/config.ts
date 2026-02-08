@@ -68,13 +68,15 @@ export const config = {
 /**
  * Obtener la clave de administrador desde variables de entorno
  * Prioridad: NEXT_PUBLIC_ADMIN_KEY > valor por defecto para desarrollo
+ * Debe coincidir con ADMIN_KEY del backend/proxy para que tenants y Acceder funcionen.
+ * El proxy/sandbox usa admin123 por defecto (adminKey.js).
  */
 export function getAdminKey(): string {
   if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_ADMIN_KEY) {
     return process.env.NEXT_PUBLIC_ADMIN_KEY;
   }
-  // Valor por defecto solo para desarrollo local
-  return 'admin1234';
+  // Valor por defecto (debe coincidir con backend: sandbox adminKey.js usa admin123)
+  return 'admin123';
 }
 
 // Función helper para obtener la URL completa de la API

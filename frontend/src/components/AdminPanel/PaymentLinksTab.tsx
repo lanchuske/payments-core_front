@@ -166,13 +166,14 @@ export function PaymentLinksTab() {
         successUrl: formData.successUrl || undefined,
         cancelUrl: formData.cancelUrl || undefined,
       });
-      
-      if (response.success && response.data) {
-        const linkData = response.data.data || response.data;
-        setCreatedLink({
-          url: linkData.url || '',
-          qrCode: linkData.qrCode || '',
-        });
+
+      const raw = response as { success?: boolean; data?: { data?: { url?: string; qrCode?: string }; url?: string; qrCode?: string }; url?: string; qrCode?: string; message?: string };
+      const linkData = raw?.data?.data ?? raw?.data ?? raw;
+      const url = linkData?.url ?? '';
+      const qrCode = linkData?.qrCode ?? '';
+
+      if (url || qrCode || raw?.success) {
+        setCreatedLink({ url, qrCode });
         showSuccess('Payment Link creado exitosamente');
         setFormData({
           amount: '',
@@ -185,9 +186,9 @@ export function PaymentLinksTab() {
           cancelUrl: '',
         });
         setShowForm(false);
-        loadPaymentLinks(); // Recargar lista
+        loadPaymentLinks();
       } else {
-        showError(response.message || 'Error al crear el payment link');
+        showError(raw?.message || 'Error al crear el payment link');
       }
     } catch (error: unknown) {
       console.error('Error creating payment link:', error);

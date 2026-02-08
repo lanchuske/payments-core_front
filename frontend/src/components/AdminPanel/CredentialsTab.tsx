@@ -49,7 +49,13 @@ export function CredentialsTab({
       });
 
       if (result.data.success && result.data.data) {
-        setGeneratedTenantId(result.data.data.id);
+        const tenantData = result.data.data as { id?: string; tenantId?: string };
+        const tenantId = tenantData.id || tenantData.tenantId;
+        if (!tenantId || tenantId === 'tenantId') {
+          showError('❌ La respuesta del servidor no incluyó el ID del tenant');
+          return;
+        }
+        setGeneratedTenantId(tenantId);
         showSuccess('✅ Tenant creado exitosamente');
         setStep(3);
       } else {

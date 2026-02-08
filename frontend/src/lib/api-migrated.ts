@@ -93,10 +93,11 @@ export const apiService = {
 
   /**
    * Obtener tenants activos
+   * adminKey: obligatorio para el sandbox (GET /tenants exige ?adminKey=)
    */
-  getActiveTenants: async () => {
+  getActiveTenants: async (adminKey?: string) => {
     try {
-      const response = await nestjsApi.getActiveTenants();
+      const response = await nestjsApi.getActiveTenants(adminKey);
       console.log('🔍 [DEBUG] Respuesta completa de getActiveTenants:', response);
       
       // El endpoint /tenants?status=ACTIVE devuelve ListTenantsResponseDto:
@@ -141,11 +142,11 @@ export const apiService = {
 
   /**
    * Obtener tenants inactivos
+   * adminKey: obligatorio para el sandbox (GET /tenants exige ?adminKey=)
    */
-  getInactiveTenants: async () => {
+  getInactiveTenants: async (adminKey?: string) => {
     try {
-      // El backend NestJS usa status filter
-      const response = await nestjsApi.getTenants({ status: 'INACTIVE' });
+      const response = await nestjsApi.getTenants({ status: 'INACTIVE', adminKey });
       console.log('🔍 [DEBUG] Respuesta completa de getInactiveTenants:', response);
       
       // El endpoint /tenants?status=INACTIVE devuelve ListTenantsResponseDto:
@@ -199,9 +200,12 @@ export const apiService = {
     limits?: Record<string, unknown>;
   }) => {
     try {
+      const codeOrTenantId = tenantData.tenantId || tenantData.code || '';
       const response = await nestjsApi.createTenant({
-        tenantId: tenantData.tenantId || tenantData.code || '',
+        tenantId: codeOrTenantId,
+        code: tenantData.code || codeOrTenantId,
         name: tenantData.name || '',
+        cuit: tenantData.cuit,
         type: tenantData.type,
         status: tenantData.status,
         domain: tenantData.domain,

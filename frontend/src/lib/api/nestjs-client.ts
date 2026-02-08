@@ -5,7 +5,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { config } from '../config';
+import { config, getAdminKey } from '../config';
 
 // Tipos de respuesta estándar del backend NestJS
 export interface NestJSResponse<T = any> {
@@ -100,14 +100,20 @@ class NestJSApiClient {
     limit?: number;
     status?: string;
     type?: string;
+    adminKey?: string;
   }): Promise<PaginatedResponse<any>> {
-    const response = await this.client.get('/tenants', { params });
+    // adminKey requerido por proxy: sandbox usa admin123 por defecto (no admin1234)
+    const adminKey = params?.adminKey ?? getAdminKey();
+    const mergedParams = { ...params, adminKey };
+    const response = await this.client.get('/tenants', { params: mergedParams });
     return response.data;
   }
 
   async createTenant(data: {
     tenantId: string;
     name: string;
+    code?: string;
+    cuit?: string;
     type?: string;
     status?: string;
     domain?: string;
@@ -128,8 +134,13 @@ class NestJSApiClient {
     return response.data;
   }
 
-  async getActiveTenants(): Promise<NestJSResponse<any[]>> {
-    const response = await this.client.get('/tenants?status=ACTIVE&limit=50');
+  async getActiveTenants(adminKey?: string): Promise<NestJSResponse<any[]>> {
+    const params: Record<string, string | number> = {
+      status: 'ACTIVE',
+      limit: 50,
+      adminKey: adminKey ?? getAdminKey(),
+    };
+    const response = await this.client.get('/tenants', { params });
     return response.data;
   }
 
@@ -168,11 +179,17 @@ class NestJSApiClient {
   // ==========================================
 
   async getTenantCredentials(id: string): Promise<NestJSResponse<any>> {
+    if (!id || id === 'tenantId' || id === 'undefined') {
+      return Promise.reject(new Error('ID de tenant inválido'));
+    }
     const response = await this.client.get(`/tenants/${id}/credentials`);
     return response.data;
   }
 
   async generateTenantCredentials(id: string): Promise<NestJSResponse<any>> {
+    if (!id || id === 'tenantId' || id === 'undefined') {
+      return Promise.reject(new Error('ID de tenant inválido'));
+    }
     const response = await this.client.post(`/tenants/${id}/credentials`);
     return response.data;
   }
@@ -375,43 +392,30 @@ class NestJSApiClient {
     endDate?: string;
     page?: number;
     limit?: number;
+    adminKey?: string;
   }): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.get(`${baseUrlWithoutPrefix}/api/transactions`, {
-      params,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const adminKey = params?.adminKey ?? getAdminKey();
+    const mergedParams = { ...params, adminKey };
+    const response = await this.client.get('api/transactions', {
+      params: mergedParams,
     });
     return response.data;
   }
 
-  async getTransaction(id: string, tenantId?: string): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.get(`${baseUrlWithoutPrefix}/api/transactions/${id}`, {
-      params: { tenantId },
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+  async getTransaction(
+    id: string,
+    tenantId?: string,
+    adminKey?: string,
+  ): Promise<NestJSResponse<any>> {
+    const response = await this.client.get(`api/transactions/${id}`, {
+      params: { tenantId, adminKey: adminKey ?? getAdminKey() },
     });
     return response.data;
   }
 
   async createTransaction(data: any): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.post(`${baseUrlWithoutPrefix}/api/transactions`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.post('api/transactions', data, {
+      params: { adminKey: getAdminKey() },
     });
     return response.data;
   }
@@ -429,14 +433,8 @@ class NestJSApiClient {
     beneficiaryName?: string;
     beneficiaryCuit?: string;
   }): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.post(`${baseUrlWithoutPrefix}/api/transfers`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.post('api/transfers', data, {
+      params: { adminKey: getAdminKey() },
     });
     return response.data;
   }
@@ -449,17 +447,10 @@ class NestJSApiClient {
     endDate?: string;
     page?: number;
     limit?: number;
+    adminKey?: string;
   }): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.get(`${baseUrlWithoutPrefix}/api/transfers`, {
-      params,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
-    });
+    const mergedParams = { ...params, adminKey: params?.adminKey ?? getAdminKey() };
+    const response = await this.client.get('api/transfers', { params: mergedParams });
     return response.data;
   }
 
@@ -477,28 +468,15 @@ class NestJSApiClient {
     cancelUrl?: string;
     payerInfo?: any;
   }): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.post(`${baseUrlWithoutPrefix}/api/digital-payments/payment-links/with-qr`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.post('api/digital-payments/payment-links/with-qr', data, {
+      params: { adminKey: getAdminKey() },
     });
     return response.data;
   }
 
   async getPaymentLinks(tenantId: string, status?: string): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.get(`${baseUrlWithoutPrefix}/api/digital-payments/payment-links`, {
-      params: { tenantId, status },
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.get('api/digital-payments/payment-links', {
+      params: { tenantId, status, adminKey: getAdminKey() },
     });
     return response.data;
   }
@@ -519,28 +497,38 @@ class NestJSApiClient {
     maxRejections?: number;
     metadata?: any;
   }): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.post(`${baseUrlWithoutPrefix}/api/debits/mandates`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.post('api/debits/mandates', data, {
+      params: { adminKey: getAdminKey() },
     });
     return response.data;
   }
 
   async getDebitMandates(tenantId: string, status?: string): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.get(`${baseUrlWithoutPrefix}/api/debits/mandates`, {
-      params: { tenantId, status },
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.get('api/debits/mandates', {
+      params: { tenantId, status, adminKey: getAdminKey() },
+    });
+    return response.data;
+  }
+
+  // === ACCOUNTS (cuentas por tenant, para mandatos y admin) ===
+
+  async getAccounts(tenantId: string): Promise<NestJSResponse<{ id: string; cbu: string; accountNumber: string; tenantId: string }[]>> {
+    const response = await this.client.get('api/accounts', {
+      params: { tenantId, adminKey: getAdminKey() },
+    });
+    return response.data;
+  }
+
+  async createAccount(data: {
+    tenantId: string;
+    cbu: string;
+    accountNumber?: string;
+    accountType?: string;
+    bank?: string;
+    branch?: string;
+  }): Promise<NestJSResponse<{ id: string; cbu: string; accountNumber: string; tenantId: string }>> {
+    const response = await this.client.post('api/accounts', data, {
+      params: { adminKey: getAdminKey() },
     });
     return response.data;
   }
@@ -557,14 +545,8 @@ class NestJSApiClient {
     type?: string;
     metadata?: any;
   }): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.post(`${baseUrlWithoutPrefix}/api/reconciliation`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.post('api/reconciliation', data, {
+      params: { adminKey: getAdminKey() },
     });
     return response.data;
   }
@@ -576,40 +558,22 @@ class NestJSApiClient {
     amountTolerance?: number,
     dateToleranceDays?: number,
   ): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
     const formData = new FormData();
     formData.append('file', file);
-    
-    const params = new URLSearchParams();
-    params.append('format', format);
-    if (amountTolerance !== undefined) params.append('amountTolerance', amountTolerance.toString());
-    if (dateToleranceDays !== undefined) params.append('dateToleranceDays', dateToleranceDays.toString());
-
-    const response = await axios.post(
-      `${baseUrlWithoutPrefix}/api/reconciliation/${reconciliationId}/upload?${params.toString()}`,
+    const params: Record<string, string> = { format, adminKey: getAdminKey() };
+    if (amountTolerance !== undefined) params.amountTolerance = amountTolerance.toString();
+    if (dateToleranceDays !== undefined) params.dateToleranceDays = dateToleranceDays.toString();
+    const response = await this.client.post(
+      `api/reconciliation/${reconciliationId}/upload`,
       formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: typeof window !== 'undefined' 
-            ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-            : '',
-        },
-      },
+      { params },
     );
     return response.data;
   }
 
   async getReconciliations(tenantId: string, accountId?: string): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.get(`${baseUrlWithoutPrefix}/api/reconciliation`, {
-      params: { tenantId, accountId },
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.get('api/reconciliation', {
+      params: { tenantId, accountId, adminKey: getAdminKey() },
     });
     return response.data;
   }
@@ -617,29 +581,15 @@ class NestJSApiClient {
   // === REPORTS ===
 
   async getRealtimeMetrics(tenantId: string): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.get(`${baseUrlWithoutPrefix}/api/reports/metrics/realtime`, {
-      params: { tenantId },
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.get('api/reports/metrics/realtime', {
+      params: { tenantId, adminKey: getAdminKey() },
     });
     return response.data;
   }
 
   async getAnalytics(tenantId: string): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.get(`${baseUrlWithoutPrefix}/api/reports/analytics`, {
-      params: { tenantId },
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.get('api/reports/analytics', {
+      params: { tenantId, adminKey: getAdminKey() },
     });
     return response.data;
   }
@@ -650,14 +600,8 @@ class NestJSApiClient {
     endDate: string;
     accountIds?: string[];
   }): Promise<NestJSResponse<any>> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.post(`${baseUrlWithoutPrefix}/api/reports/transactions`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: typeof window !== 'undefined' 
-          ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-          : '',
-      },
+    const response = await this.client.post('api/reports/transactions', data, {
+      params: { adminKey: getAdminKey() },
     });
     return response.data;
   }
@@ -672,17 +616,11 @@ class NestJSApiClient {
     },
     format: 'csv' | 'json',
   ): Promise<Blob> {
-    const baseUrlWithoutPrefix = API_BASE_URL.replace('/api/coelsa', '');
-    const response = await axios.post(
-      `${baseUrlWithoutPrefix}/api/reports/regulatory/bcra/export/${format}`,
+    const response = await this.client.post(
+      `api/reports/regulatory/bcra/export/${format}`,
       data,
       {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: typeof window !== 'undefined' 
-            ? `Bearer ${localStorage.getItem('auth_token') || ''}` 
-            : '',
-        },
+        params: { adminKey: getAdminKey() },
         responseType: 'blob',
       },
     );

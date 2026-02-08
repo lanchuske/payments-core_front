@@ -13,7 +13,7 @@ function getAdminKey() {
   return (
     process.env.ADMIN_KEY ||
     process.env.ADMIN_PASSWORD ||
-    'admin1234' // Valor por defecto solo para desarrollo local
+    'admin123' // Valor por defecto para desarrollo (debe coincidir con la UI del panel)
   );
 }
 

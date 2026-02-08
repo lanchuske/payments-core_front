@@ -11,17 +11,19 @@ const { ApiResponse } = require('../utils/apiResponse');
 class TenantService {
   /**
    * Crear un nuevo tenant
+   * Acepta code o tenantId (el frontend api-migrated puede enviar tenantId con el valor del código)
    */
   async createTenant(tenantData) {
     try {
-      // Validar datos requeridos
-      if (!tenantData.name || !tenantData.code) {
+      const codeRaw = tenantData.code ?? tenantData.tenantId;
+      if (!tenantData.name || !codeRaw) {
         throw new Error('Nombre y código son requeridos');
       }
+      const code = String(codeRaw).trim();
 
       // Verificar que el código no exista
       const existingTenant = await TenantSimple.findOne({
-        where: { code: tenantData.code },
+        where: { code },
       });
 
       if (existingTenant) {
@@ -32,7 +34,8 @@ class TenantService {
       const tenant = await TenantSimple.create({
         id: uuidv4(),
         name: tenantData.name,
-        code: tenantData.code,
+        code,
+        cuit: tenantData.cuit || null,
         branding: tenantData.branding || {},
         domains: tenantData.domains || [],
         limits: tenantData.limits || {},
@@ -557,10 +560,39 @@ class TenantService {
             generated_at: sandboxCredentials.generated_at,
             base_url: sandboxCredentials.base_url,
           },
+          apiKey,
+          apiSecret,
         }
       );
     } catch (error) {
       console.error('Error en generateSandboxApiKeys:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener credenciales del sandbox de un tenant
+   */
+  async getTenantCredentials(tenantId) {
+    try {
+      const tenant = await TenantSimple.findByPk(tenantId);
+
+      if (!tenant) {
+        throw new Error('Tenant no encontrado');
+      }
+
+      const raw = tenant.sandbox_credentials || {};
+      const apiKey = raw.api_key ?? raw.apiKey;
+      const apiSecret = raw.api_secret ?? raw.apiSecret;
+
+      return new ApiResponse(true, 'Credenciales del tenant', {
+        tenant_id: tenantId,
+        sandbox_credentials: tenant.sandbox_credentials,
+        apiKey,
+        apiSecret,
+      });
+    } catch (error) {
+      console.error('Error en getTenantCredentials:', error);
       throw error;
     }
   }
