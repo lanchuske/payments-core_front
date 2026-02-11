@@ -1,7 +1,15 @@
 import type { NextConfig } from 'next';
 
+const sandboxUrl = process.env.SANDBOX_URL || 'http://localhost:3004';
+
 const nextConfig: NextConfig = {
   /* config options here */
+  // En desarrollo, proxy de /api/coelsa al sandbox para que las llamadas desde el mismo origen funcionen
+  async rewrites() {
+    return [
+      { source: '/api/coelsa/:path*', destination: `${sandboxUrl}/api/coelsa/:path*` },
+    ];
+  },
   eslint: {
     // Deshabilitar ESLint durante el build para evitar errores
     ignoreDuringBuilds: true,

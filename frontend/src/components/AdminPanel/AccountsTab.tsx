@@ -139,12 +139,19 @@ export function AccountsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Cuentas del tenant</h2>
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Cuentas del tenant</h2>
+          {tenantId && (
+            <p className="mt-0.5 text-sm text-slate-500">
+              Tenant actual: <span className="font-medium text-slate-700">{tenantId}</span>
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          className="px-4 py-2 text-white bg-slate-700 rounded-lg hover:bg-slate-800"
         >
           {showForm ? '✕ Cancelar' : '+ Crear cuenta'}
         </button>
@@ -173,7 +180,7 @@ export function AccountsTab() {
                   formData.cbu.length === CBU_LENGTH_CONST && cbuValidation && !cbuValidation.valid
                     ? 'border-red-500 bg-red-50'
                     : formData.cbu.length === CBU_LENGTH_CONST && cbuValidation?.valid
-                      ? 'border-green-600 bg-green-50/50'
+                      ? 'border-slate-500 bg-slate-50/50'
                       : 'border-gray-300'
                 }`}
                 maxLength={CBU_LENGTH_CONST}
@@ -200,7 +207,7 @@ export function AccountsTab() {
                   </div>
                 )}
                 {cbuValidation?.valid && (
-                  <p className="text-sm text-green-700">CBU válido (dígitos verificadores correctos).</p>
+                  <p className="text-sm text-slate-700">CBU válido (dígitos verificadores correctos).</p>
                 )}
               </div>
             </div>
@@ -263,7 +270,7 @@ export function AccountsTab() {
               <button
                 type="submit"
                 disabled={creating || (cbuDigits.length === CBU_LENGTH_CONST && cbuValidation && !cbuValidation.valid)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? 'Creando...' : 'Crear cuenta'}
               </button>

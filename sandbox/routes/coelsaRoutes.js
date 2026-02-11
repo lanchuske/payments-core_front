@@ -466,148 +466,219 @@ router.post('/tenants/public', async (req, res) => {
 });
 
 /**
+ * GET /tenants/by-tenant-id/:tenantId/data
+ * Proxy al core-bff para datos del tenant (estadísticas, cheques, cuentas, endosos).
+ * Acepta UUID o código de tenant.
+ */
+router.get('/tenants/by-tenant-id/:tenantId/data', async (req, res) => {
+  try {
+    const CORE_BFF_URL = process.env.CORE_BFF_URL || 'http://localhost:3002';
+    const { tenantId } = req.params;
+    const url = `${CORE_BFF_URL}/api/coelsa/tenants/by-tenant-id/${encodeURIComponent(tenantId)}/data`;
+    const axios = require('axios');
+    const response = await axios.get(url, {
+      timeout: 30000,
+      validateStatus: () => true,
+    });
+    res.status(response.status).set(response.headers).send(response.data);
+  } catch (err) {
+    logger.error('Proxy GET tenants/by-tenant-id/:id/data:', err.message);
+    res.status(502).json({
+      success: false,
+      message: 'Error al obtener datos del tenant desde el BFF',
+      error: err.message,
+    });
+  }
+});
+
+/**
+ * DELETE /tenants/by-tenant-id/:tenantId/data
+ * Proxy al core-bff para borrar datos del tenant.
+ */
+router.delete('/tenants/by-tenant-id/:tenantId/data', async (req, res) => {
+  try {
+    const CORE_BFF_URL = process.env.CORE_BFF_URL || 'http://localhost:3002';
+    const { tenantId } = req.params;
+    const url = `${CORE_BFF_URL}/api/coelsa/tenants/by-tenant-id/${encodeURIComponent(tenantId)}/data`;
+    const axios = require('axios');
+    const response = await axios.delete(url, {
+      timeout: 30000,
+      validateStatus: () => true,
+    });
+    res.status(response.status).set(response.headers).send(response.data);
+  } catch (err) {
+    logger.error('Proxy DELETE tenants/by-tenant-id/:id/data:', err.message);
+    res.status(502).json({
+      success: false,
+      message: 'Error al borrar datos del tenant desde el BFF',
+      error: err.message,
+    });
+  }
+});
+
+/**
  * GET /tenants/:tenantId/credentials
- * Obtener credenciales del tenant (estilo NestJS)
+ * Obtener credenciales del tenant. Intenta primero en core-bff; si falla, usa BD local del sandbox.
  */
 router.get('/tenants/:tenantId/credentials', async (req, res) => {
   try {
-    const tenantController = require('../controllers/tenantController');
-    await tenantController.getTenantCredentials(req, res);
+    const { tenantId } = req.params;
+
+    try {
+      const bffClient = require('../services/bffClient');
+      const response = await bffClient.getTenantCredentials(tenantId);
+      // BFF devuelve { success, data: { tenantId, apiKey, apiSecret, createdAt? } } o data: null si no hay credenciales
+      // Aceptar camelCase (apiKey/apiSecret) y snake_case (api_key/api_secret) por compatibilidad
+      const data = response.data;
+      const apiKey = (data && (data.apiKey || data.api_key)) || '';
+      const apiSecret = (data && (data.apiSecret || data.api_secret)) || '';
+      if (data && (apiKey || apiSecret)) {
+        const tid = data.tenantId || data.tenant_id || tenantId;
+        return res.status(200).json({
+          success: true,
+          message: 'Credenciales del tenant',
+          data: {
+            tenantId: tid,
+            apiKey,
+            apiSecret,
+            sandbox_credentials: {
+              tenantId: tid,
+              apiKey,
+              apiSecret,
+            },
+          },
+        });
+      }
+      // BFF respondió pero sin credenciales (null o vacías)
+      return res.status(200).json({
+        success: true,
+        message: 'El tenant no tiene credenciales generadas. Use el botón "Generar credenciales" para crearlas.',
+        data: {
+          tenantId,
+          apiKey: '',
+          apiSecret: '',
+          sandbox_credentials: {},
+        },
+      });
+    } catch (bffError) {
+      const status = bffError.response?.status;
+      if (status === 404 || status === 502 || status === 503 || bffError.code === 'ECONNREFUSED') {
+        const tenantController = require('../controllers/tenantController');
+        return tenantController.getTenantCredentials(req, res);
+      }
+      throw bffError;
+    }
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor',
-      error: error.message,
-    });
+    const { formatErrorResponse } = require('../utils/errorHandler');
+    res.status(error.response?.status || 500).json(
+      formatErrorResponse(error, 'Error obteniendo credenciales del tenant')
+    );
   }
 });
 
 /**
  * POST /tenants/:tenantId/credentials
- * Generar API keys del tenant (estilo NestJS)
+ * Generar API keys del tenant. Intenta primero en core-bff; si falla, usa BD local del sandbox.
  */
 router.post('/tenants/:tenantId/credentials', async (req, res) => {
   try {
-    const tenantController = require('../controllers/tenantController');
-    req.params.id = req.params.tenantId;
-    await tenantController.generateSandboxApiKeys(req, res);
+    const { tenantId } = req.params;
+
+    try {
+      const bffClient = require('../services/bffClient');
+      const response = await bffClient.generateTenantCredentials(tenantId);
+      const data = response.data || response;
+      const apiKey = data.apiKey || data.api_key || '';
+      const apiSecret = data.apiSecret || data.api_secret || '';
+      const tid = data.tenantId || data.tenant_id || tenantId;
+      return res.status(200).json({
+        success: true,
+        message: 'Credenciales generadas exitosamente',
+        data: {
+          tenantId: tid,
+          apiKey,
+          apiSecret,
+          sandbox_credentials: {
+            tenantId: tid,
+            apiKey,
+            apiSecret,
+          },
+        },
+      });
+    } catch (bffError) {
+      const status = bffError.response?.status;
+      if (status === 404 || status === 502 || status === 503 || bffError.code === 'ECONNREFUSED') {
+        const tenantController = require('../controllers/tenantController');
+        req.params.id = req.params.tenantId;
+        return tenantController.generateSandboxApiKeys(req, res);
+      }
+      throw bffError;
+    }
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor',
-      error: error.message,
-    });
+    const { formatErrorResponse } = require('../utils/errorHandler');
+    res.status(error.response?.status || 500).json(
+      formatErrorResponse(error, 'Error generando credenciales del tenant')
+    );
   }
 });
 
 /**
  * GET /logs
- * Obtener logs del sistema en tiempo real
+ * Logs solo desde el BFF, filtrados por tenant. Requiere tenantId. Sin fallback a memoria/archivos.
  */
-router.get('/logs', (req, res) => {
-  try {
-    // Obtener logs de memoria (tiempo real)
-    const memoryLogs = logger.getRecentLogs();
-    
-    let logs = [];
-    
-    if (memoryLogs.length > 0) {
-      // Usar logs de memoria si están disponibles
-      logs = memoryLogs;
-    } else {
-      // Fallback: leer logs de archivos (solo en desarrollo local)
-      const fs = require('fs');
-      const path = require('path');
+router.get('/logs', async (req, res) => {
+  const bffClient = require('../services/bffClient');
+  const tenantId = (req.query.tenantId || '').toString().trim();
 
-      const logFiles = [
-        {
-          name: 'combined',
-          path: path.join(__dirname, '../../logs/combined.log'),
-        },
-        { name: 'error', path: path.join(__dirname, '../../logs/error.log') },
-        { name: 'audit', path: path.join(__dirname, '../../logs/audit.log') },
-      ];
-
-      logFiles.forEach(logFile => {
-        try {
-          if (fs.existsSync(logFile.path)) {
-            const content = fs.readFileSync(logFile.path, 'utf8');
-            const lines = content.split('\n').filter(line => line.trim());
-
-            // Obtener las últimas 50 líneas de cada archivo
-            const recentLines = lines.slice(-50);
-
-            recentLines.forEach(line => {
-              // Parsear timestamp del log si existe
-              const timestampMatch = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
-              const timestamp = timestampMatch ? timestampMatch[1] : new Date().toISOString();
-              
-              logs.push({
-                file: logFile.name,
-                timestamp: timestamp,
-                message: line,
-                level: logFile.name === 'error' ? 'error' : 'info',
-              });
-            });
-          }
-        } catch (err) {
-          logs.push({
-            file: logFile.name,
-            timestamp: new Date().toISOString(),
-            message: `Error reading log file: ${err.message}`,
-            level: 'error',
-          });
-        }
-      });
-
-      // Si no hay logs en archivos, generar logs de ejemplo para demostración
-      if (logs.length === 0) {
-        const now = new Date();
-        logs.push(
-          {
-            file: 'combined',
-            timestamp: new Date(now.getTime() - 1000).toISOString(),
-            message: `[${now.toISOString()}] [INFO]: API Request GET /api/coelsa/health - 200 - 15ms`,
-            level: 'info',
-          },
-          {
-            file: 'combined',
-            timestamp: new Date(now.getTime() - 2000).toISOString(),
-            message: `[${new Date(now.getTime() - 2000).toISOString()}] [INFO]: API Request GET /api/coelsa/Cuentas/Cuenta - 200 - 45ms`,
-            level: 'info',
-          },
-          {
-            file: 'combined',
-            timestamp: new Date(now.getTime() - 3000).toISOString(),
-            message: `[${new Date(now.getTime() - 3000).toISOString()}] [INFO]: API Request GET /api/coelsa/Cheques/Cheque - 200 - 32ms`,
-            level: 'info',
-          },
-          {
-            file: 'audit',
-            timestamp: new Date(now.getTime() - 4000).toISOString(),
-            message: `[${new Date(now.getTime() - 4000).toISOString()}] [AUDIT]: Tenant authentication successful for tenant: 6d0358d0-e0d8-4bb3-bfb0-225db8924cb5`,
-            level: 'info',
-          }
-        );
-      }
-    }
-
-    // Ordenar por timestamp (más recientes primero)
-    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    res.json({
-      success: true,
-      data: {
-        logs: logs.slice(0, 100), // Limitar a 100 logs más recientes
-        total: logs.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
+  if (!tenantId) {
+    return res.status(400).json({
       success: false,
-      message: 'Error obteniendo logs',
-      error: error.message,
+      message: 'tenantId es requerido para obtener logs',
+    });
+  }
+
+  try {
+    const params = {
+      page: req.query.page || 1,
+      limit: req.query.limit || 10,
+      level: req.query.level || '',
+      tenantId,
+      search: req.query.search || '',
+      fechaDesde: req.query.fechaDesde || '',
+      fechaHasta: req.query.fechaHasta || '',
+    };
+    const bffResponse = await bffClient.getLogs(params);
+    if (bffResponse && bffResponse.success && bffResponse.data) {
+      const { logs = [], total = 0, timestamp } = bffResponse.data;
+      return res.json({
+        success: true,
+        data: {
+          source: 'database',
+          logs: logs.map((log) => ({
+            file: log.file || log.service || 'system',
+            timestamp: log.timestamp,
+            message: log.message,
+            level: (log.level || 'info').toLowerCase(),
+            ...(log.url && { url: log.url }),
+            ...(log.method && { method: log.method }),
+            ...(log.tenant_id && { tenantId: log.tenant_id }),
+            ...(log.action && { action: log.action }),
+          })),
+          total,
+          timestamp: timestamp || new Date().toISOString(),
+        },
+      });
+    }
+    return res.status(502).json({
+      success: false,
+      message: 'El BFF no devolvió logs válidos',
+    });
+  } catch (bffError) {
+    const status = bffError.response?.status || 502;
+    const message = bffError.response?.data?.message || bffError.message || 'Error obteniendo logs del BFF';
+    return res.status(status).json({
+      success: false,
+      message,
     });
   }
 });
@@ -982,10 +1053,87 @@ router.get('/debug-tenant/:id', async (req, res) => {
 });
 
 /**
- * GET /tenants
- * Listar todos los tenants (requiere clave de administrador)
- * Intenta BFF primero; si falla (404, BFF no disponible), usa BD local del sandbox.
+ * GET /tenants/active
+ * Listar tenants activos (para filtros en Logs, etc.). Proxy al BFF o fallback a GET /tenants con status=ACTIVE.
  */
+router.get('/tenants/active', async (req, res) => {
+  try {
+    const { validateAdminKey } = require('../utils/adminKey');
+    const adminKey = req.query.adminKey;
+    if (!validateAdminKey(adminKey)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Clave de administrador requerida (adminKey en query)',
+      });
+    }
+    let tenants = [];
+    try {
+      const bffClient = require('../services/bffClient');
+      const response = await bffClient.client.get('/tenants/active');
+      const data = response.data;
+      if (data && data.success && data.data && data.data.tenants) {
+        tenants = data.data.tenants.map(t => ({
+          id: t.id,
+          name: t.name,
+          code: t.tenantId || t.code,
+          cuit: t.cuit,
+        }));
+        return res.json({ success: true, data: { tenants } });
+      }
+    } catch (bffErr) {
+      const status = bffErr.response?.status;
+      if (status === 404 || status === 502 || status === 503 || bffErr.code === 'ECONNREFUSED') {
+        const bffClient = require('../services/bffClient');
+        const fallback = await bffClient.getTenants({ status: 'ACTIVE', limit: 100 });
+        const list = fallback.data || fallback;
+        tenants = Array.isArray(list) ? list : [];
+        return res.json({
+          success: true,
+          data: {
+            tenants: tenants.map(t => ({
+              id: t.id,
+              name: t.name,
+              code: t.tenantId || t.code,
+              cuit: t.cuit,
+            })),
+          },
+        });
+      }
+      throw bffErr;
+    }
+    return res.json({ success: true, data: { tenants } });
+  } catch (error) {
+    const { formatErrorResponse } = require('../utils/errorHandler');
+    res.status(error.response?.status || 500).json(
+      formatErrorResponse(error, 'Error obteniendo tenants activos')
+    );
+  }
+});
+
+/**
+ * Lista estándar de capacidades (funciones) que expone este sandbox para vincular.
+ * Usado por GET /discover para que el frontend muestre "funciones para vincular".
+ */
+const DISCOVER_CAPABILITIES = [
+  { name: 'cheque_emission', displayName: 'Emisión de Cheques', description: 'Permite emitir cheques electrónicos' },
+  { name: 'cheque_validation', displayName: 'Validación de Cheques', description: 'Permite validar cheques electrónicos' },
+  { name: 'cheque_acceptance', displayName: 'Aceptación de Cheques', description: 'Permite aceptar cheques recibidos' },
+  { name: 'cheque_rejection', displayName: 'Rechazo de Cheques', description: 'Permite rechazar cheques recibidos' },
+  { name: 'cheque_endorsement', displayName: 'Endoso de Cheques', description: 'Permite endosar cheques a terceros' },
+  { name: 'cheque_negotiation', displayName: 'Endoso en Negociación', description: 'Permite endosar cheques para negociación' },
+  { name: 'cheque_custody', displayName: 'Custodia de Cheques', description: 'Permite poner cheques en custodia' },
+  { name: 'cheque_deposit', displayName: 'Depósito de Cheques', description: 'Permite depositar cheques en cuenta' },
+  { name: 'cheque_payment', displayName: 'Pago de Cheques', description: 'Permite pagar cheques emitidos' },
+  { name: 'cheque_return', displayName: 'Devolución de Cheques', description: 'Permite solicitar devolución de cheques' },
+  { name: 'cheque_mandate', displayName: 'Mandatos de Cobro', description: 'Permite crear mandatos de cobro' },
+  { name: 'cheque_guarantee', displayName: 'Avales de Cheques', description: 'Permite solicitar avales para cheques' },
+  { name: 'cheque_cession', displayName: 'Cesión de Derechos', description: 'Permite ceder derechos sobre cheques' },
+  { name: 'cheque_certificate', displayName: 'Certificados CAC', description: 'Permite emitir certificados de autenticidad' },
+  { name: 'account_management', displayName: 'Gestión de Cuentas', description: 'Permite gestionar cuentas emisoras' },
+  { name: 'reports', displayName: 'Reportes y Conciliación', description: 'Permite generar reportes y conciliaciones' },
+  { name: 'notifications', displayName: 'Notificaciones', description: 'Permite gestionar notificaciones del sistema' },
+];
+
 function formatTenantForFrontend(tenant) {
   const t = tenant && typeof tenant.get === 'function' ? tenant.get({ plain: true }) : tenant;
   const id = t.id || t.tenantId;
@@ -1003,9 +1151,58 @@ function formatTenantForFrontend(tenant) {
   };
 }
 
-router.get('/tenants', async (req, res) => {
+/**
+ * GET /discover
+ * Descubrimiento para configuración de API: devuelve tenants (si adminKey) y capacidades.
+ * Permite al frontend "Conectar por URL" y obtener lista de tenants y funciones a vincular.
+ */
+router.get('/discover', async (req, res) => {
   try {
     const { adminKey } = req.query;
+    const baseUrl = `${req.protocol}://${req.get('host') || req.hostname}${req.baseUrl || ''}`.replace(/\/$/, '');
+
+    const response = {
+      success: true,
+      baseUrl,
+      providerName: 'Sandbox COELSA',
+      capabilities: DISCOVER_CAPABILITIES,
+      tenants: [],
+    };
+
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (validateAdminKey(adminKey)) {
+      const page = 1;
+      const limit = 100;
+      try {
+        const bffClient = require('../services/bffClient');
+        const tenantResponse = await bffClient.getTenants({ page, limit });
+        const list = tenantResponse.data || [];
+        response.tenants = list.map(t => formatTenantForFrontend(t));
+      } catch (bffError) {
+        const status = bffError.response?.status;
+        if (status === 404 || status === 502 || status === 503 || bffError.code === 'ECONNREFUSED') {
+          const tenantService = require('../services/tenantService');
+          const result = await tenantService.listTenants({ page, limit, sortBy: 'createdAt', sortOrder: 'DESC' });
+          const rows = result.data?.tenants || [];
+          response.tenants = rows.map(t => formatTenantForFrontend(t));
+        } else {
+          throw bffError;
+        }
+      }
+    }
+
+    res.json(response);
+  } catch (error) {
+    const { formatErrorResponse } = require('../utils/errorHandler');
+    res.status(error.response?.status || 500).json(
+      formatErrorResponse(error, 'Error en descubrimiento')
+    );
+  }
+});
+
+router.get('/tenants', async (req, res) => {
+  try {
+    const { adminKey, status } = req.query;
 
     const { validateAdminKey } = require('../utils/adminKey');
     if (!validateAdminKey(adminKey)) {
@@ -1022,7 +1219,7 @@ router.get('/tenants', async (req, res) => {
 
     try {
       const bffClient = require('../services/bffClient');
-      const response = await bffClient.getTenants({ page, limit });
+      const response = await bffClient.getTenants({ page, limit, status });
       const list = response.data || [];
       total = response.total ?? list.length;
       formattedTenants = list.map(t => formatTenantForFrontend(t));
@@ -1103,6 +1300,130 @@ router.delete('/tenants/:tenantId', async (req, res) => {
     
     res.status(error.response?.status || 500).json(
       formatErrorResponse(error, 'Error eliminando tenant')
+    );
+  }
+});
+
+/**
+ * DELETE /tenants/:id/admin
+ * Eliminar tenant permanentemente (requiere adminKey en body). Proxy al core-bff.
+ */
+router.delete('/tenants/:id/admin', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminKey } = req.body || {};
+
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!validateAdminKey(adminKey)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Clave de administrador incorrecta',
+      });
+    }
+
+    const bffClient = require('../services/bffClient');
+    const response = await bffClient.deleteTenantAdmin(id, adminKey);
+
+    res.json({
+      success: true,
+      message: response.message || 'Tenant eliminado exitosamente',
+      data: response.data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    const { formatErrorResponse } = require('../utils/errorHandler');
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: error.response?.data?.message || 'Clave de administrador incorrecta',
+      });
+    }
+    if (error.response?.status === 404) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant no encontrado',
+      });
+    }
+    res.status(error.response?.status || 500).json(
+      formatErrorResponse(error, 'Error eliminando tenant permanentemente')
+    );
+  }
+});
+
+/**
+ * PATCH /tenants/:id/status/admin
+ * Actualizar estado del tenant (restaurar de papelera o mover a papelera) - requiere adminKey en body
+ * Proxy al core-bff (payments-core-bff).
+ */
+router.patch('/tenants/:id/status/admin', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, adminKey } = req.body || {};
+
+    const { validateAdminKey } = require('../utils/adminKey');
+    if (!validateAdminKey(adminKey)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Clave de administrador incorrecta',
+      });
+    }
+
+    const bffClient = require('../services/bffClient');
+    const response = await bffClient.updateTenantStatusAdmin(id, status, adminKey);
+
+    res.json({
+      success: true,
+      message: response.message || 'Estado del tenant actualizado exitosamente',
+      data: response.data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    const { formatErrorResponse } = require('../utils/errorHandler');
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: error.response?.data?.message || 'Clave de administrador incorrecta',
+      });
+    }
+    if (error.response?.status === 404) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant no encontrado',
+      });
+    }
+    res.status(error.response?.status || 500).json(
+      formatErrorResponse(error, 'Error actualizando estado del tenant')
+    );
+  }
+});
+
+/**
+ * POST /tenants/:id/restore
+ * Restaurar tenant (proxy al core-bff).
+ */
+router.post('/tenants/:id/restore', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const bffClient = require('../services/bffClient');
+    const response = await bffClient.restoreTenant(id);
+
+    res.json({
+      success: true,
+      message: response.message || 'Tenant restaurado exitosamente',
+      data: response.data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    const { formatErrorResponse } = require('../utils/errorHandler');
+    if (error.response?.status === 404) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tenant no encontrado',
+      });
+    }
+    res.status(error.response?.status || 500).json(
+      formatErrorResponse(error, 'Error restaurando tenant')
     );
   }
 });

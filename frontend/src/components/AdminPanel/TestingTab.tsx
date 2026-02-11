@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Credentials } from '@/types';
 import {
   apiService,
@@ -10,6 +10,13 @@ import {
 import { copyToClipboard } from '@/lib/utils';
 import { useToast } from '@/hooks/useToast';
 import { getSwaggerUrl, config } from '@/lib/config';
+
+const STORAGE_TENANT_KEY = 'tenantId';
+
+function getCurrentTenantId(): string {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem(STORAGE_TENANT_KEY) || '';
+}
 
 interface TestingTabProps {
   credentials: Credentials | null;
@@ -27,85 +34,110 @@ export function TestingTab({
   const [testResult, setTestResult] = useState<any>(null);
   const { showSuccess, showError, showToast } = useToast();
 
+  const applyStoredCredentialsForTenant = useCallback((currentTenantId: string) => {
+    const stored = getStoredCredentials();
+    if (!stored) return;
+    if (stored.tenantId !== currentTenantId) return;
+    setApiKey(stored.apiKey);
+    setApiSecret(stored.apiSecret);
+    setTenantId(stored.tenantId);
+    onCredentialsLoaded(stored);
+  }, [onCredentialsLoaded]);
+
+  useEffect(() => {
+    const id = getCurrentTenantId();
+    if (id) setTenantId(id);
+    applyStoredCredentialsForTenant(id);
+  }, []);
+
+  useEffect(() => {
+    const handleTenantChanged = () => {
+      const id = getCurrentTenantId();
+      setTenantId(id);
+      applyStoredCredentialsForTenant(id);
+    };
+    window.addEventListener('tenantChanged', handleTenantChanged);
+    return () => window.removeEventListener('tenantChanged', handleTenantChanged);
+  }, [applyStoredCredentialsForTenant]);
+
   useEffect(() => {
     if (credentials) {
       setApiKey(credentials.apiKey);
       setApiSecret(credentials.apiSecret);
       setTenantId(credentials.tenantId);
+      if (typeof window !== 'undefined' && credentials.tenantId) {
+        localStorage.setItem(STORAGE_TENANT_KEY, credentials.tenantId);
+      }
     }
   }, [credentials]);
 
   const handleConfigureAccess = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🔍 handleConfigureAccess ejecutado');
-    
     if (!apiKey || !apiSecret || !tenantId) {
-      console.log('❌ Campos vacíos');
-      showError('Por favor, completa todos los campos de credenciales');
+      showError('Completa API Key, API Secret y Tenant ID');
       return;
     }
-
-    console.log('⏳ Iniciando validación de credenciales...');
     setLoading(true);
-    
     try {
-      // Probar las credenciales usando un endpoint que requiera autenticación
-      console.log('🌐 Validando credenciales con endpoint autenticado...');
-      
-      // Crear headers con las credenciales para probar
       const testHeaders = {
         'X-API-Key': apiKey,
         'X-API-Secret': apiSecret,
         'X-Tenant-ID': tenantId,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       };
-      
-      // Usar el endpoint de validación que requiere autenticación
-      // Usar la función centralizada de configuración para obtener la URL correcta del BFF
-      const apiBaseUrl = config.API_BASE_URL.endsWith('/') 
-        ? config.API_BASE_URL.slice(0, -1) 
+      const apiBaseUrl = config.API_BASE_URL.endsWith('/')
+        ? config.API_BASE_URL.slice(0, -1)
         : config.API_BASE_URL;
       const result = await fetch(`${apiBaseUrl}/validate`, {
         method: 'GET',
-        headers: testHeaders
+        headers: testHeaders,
       });
-      
-      console.log('📊 Resultado de validación:', result.status);
-      
       if (result.ok) {
-        console.log('✅ Credenciales válidas');
         const newCredentials = { apiKey, apiSecret, tenantId };
         setStoredCredentials(newCredentials);
         onCredentialsLoaded(newCredentials);
-        showSuccess('✅ Credenciales válidas y configuradas! Ahora puedes usar el Swagger con autenticación automática.', 4000);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_TENANT_KEY, tenantId);
+          window.dispatchEvent(new CustomEvent('tenantChanged', { detail: { tenantId } }));
+        }
+        showSuccess('Credenciales válidas. Configuradas para Swagger y Operando con.', 4000);
       } else if (result.status === 401) {
-        console.log('❌ Credenciales inválidas - No autorizado');
-        showError('❌ Las credenciales no son válidas. Verifica los datos e intenta nuevamente.');
+        showError('Credenciales no válidas. Revisa API Key, Secret y Tenant ID.');
       } else {
-        console.log('❌ Error en validación:', result.status);
-        showError(`❌ Error validando credenciales: ${result.status} ${result.statusText}`);
+        showError(`Error del core BFF: ${result.status} ${result.statusText}`);
       }
-    } catch (error: any) {
-      console.log('❌ Error en validación:', error);
-      showError(`❌ Error validando credenciales: ${error.message}`);
+    } catch (error: unknown) {
+      showError(`Error: ${error instanceof Error ? error.message : 'Conexión'}`);
     } finally {
       setLoading(false);
-      console.log('🏁 Validación completada');
     }
   };
 
   const handleLoadGeneratedCredentials = () => {
     const storedCreds = getStoredCredentials();
     if (!storedCreds) {
-      showError('❌ No hay credenciales generadas. Ve a la pestaña "Credenciales API" y genera las credenciales primero.');
+      showError('No hay credenciales guardadas. Genera credenciales en "Credenciales API" o "Admin Tenants" primero.');
       return;
     }
-
     setApiKey(storedCreds.apiKey);
     setApiSecret(storedCreds.apiSecret);
     setTenantId(storedCreds.tenantId);
     onCredentialsLoaded(storedCreds);
-    showSuccess('✅ Credenciales cargadas exitosamente desde el almacenamiento local', 3000);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_TENANT_KEY, storedCreds.tenantId);
+      const credsJson = localStorage.getItem('echeq-credentials');
+      if (credsJson) {
+        try {
+          const creds = JSON.parse(credsJson);
+          creds.tenantId = storedCreds.tenantId;
+          localStorage.setItem('echeq-credentials', JSON.stringify(creds));
+        } catch {
+          // ignore
+        }
+      }
+      window.dispatchEvent(new CustomEvent('tenantChanged', { detail: { tenantId: storedCreds.tenantId } }));
+    }
+    showSuccess('Credenciales cargadas. Operando con este tenant.', 3000);
   };
 
   const handleTestConnection = async () => {
@@ -199,109 +231,100 @@ export function TestingTab({
 
   const { curlHealth, curlCheques, curlCuenta } = generateCurlCommands();
 
+  const currentTenantId = getCurrentTenantId();
+
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          🧪 Testing APIs
+      <div className="flex flex-col gap-1">
+        <h2 className="text-xl font-bold text-slate-900">
+          Testing APIs
         </h2>
-        <p className="text-gray-800">
-          Configura tus credenciales de API para probar los endpoints y acceder
-          a la documentación de Swagger con autenticación automática.
+        <p className="text-sm text-slate-600">
+          Usa el tenant de <strong>Operando con:</strong> del menú superior. Las credenciales se cargan automáticamente si están guardadas; &quot;Probar Credenciales&quot; valida contra el core BFF.
         </p>
       </div>
 
-      {/* Credenciales Guardadas */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <div className="flex items-center mb-4">
-          <span className="text-2xl mr-3">📥</span>
-          <h3 className="text-lg font-semibold text-blue-800">
-            Credenciales Guardadas
-          </h3>
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-800">Tenant actual (Operando con)</h3>
+          <span className="rounded bg-slate-200 px-2 py-1 font-mono text-sm text-slate-800">
+            {currentTenantId || '—'}
+          </span>
         </div>
-        <p className="text-blue-700 mb-4">
-          Carga credenciales que ya tienes guardadas en el navegador.
+        <p className="mb-4 text-sm text-slate-600">
+          Carga las credenciales guardadas para este tenant o ingrésalas a mano y prueba contra el core BFF.
         </p>
         <button
+          type="button"
           onClick={handleLoadGeneratedCredentials}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
         >
-          📥 Cargar Credenciales Guardadas
+          Cargar credenciales guardadas
         </button>
       </div>
 
-      {/* Credenciales Manuales */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-        <div className="flex items-center mb-4">
-          <span className="text-2xl mr-3">🔍</span>
-          <h3 className="text-lg font-semibold text-green-800">
-            Probar Credenciales Manuales
-          </h3>
-        </div>
-        <p className="text-green-700 mb-4">
-          Ingresa credenciales específicas para probar su validez.
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="mb-4 text-lg font-semibold text-slate-800">
+          Probar credenciales (core BFF)
+        </h3>
+        <p className="mb-4 text-sm text-slate-600">
+          Los campos se rellenan con el tenant de Operando con. &quot;Probar Credenciales&quot; llama al endpoint de validación del core BFF con estas credenciales.
         </p>
-        
+
         <form onSubmit={handleConfigureAccess} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                API Key
-              </label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">API Key</label>
               <input
                 type="text"
                 required
                 value={apiKey || ''}
                 onChange={e => setApiKey(e.target.value)}
                 placeholder="sandbox_xxxx_xxxx_xxxx"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                API Secret
-              </label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">API Secret</label>
               <input
                 type="password"
                 required
                 value={apiSecret || ''}
                 onChange={e => setApiSecret(e.target.value)}
                 placeholder="secret_xxxx_xxxx_xxxx"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Tenant ID
-              </label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Tenant ID</label>
               <input
                 type="text"
                 required
                 value={tenantId || ''}
                 onChange={e => setTenantId(e.target.value)}
-                placeholder="uuid-tenant-id"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="uuid o código del tenant"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
               />
             </div>
           </div>
-          
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? '⏳ Probando...' : '🔍 Probar Credenciales'}
+            {loading ? 'Probando...' : 'Probar credenciales (core BFF)'}
           </button>
         </form>
       </div>
 
       {/* Estado de Conexión */}
       {credentials && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-green-800 mb-4">
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">
             ✅ Acceso Configurado
           </h3>
-          <p className="text-green-700 mb-4">
+          <p className="text-slate-700 mb-4">
             Las credenciales han sido configuradas. Ahora puedes usar el Swagger
             con autenticación automática.
           </p>
@@ -310,7 +333,7 @@ export function TestingTab({
             <button
               onClick={handleTestConnection}
               disabled={loading}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 bg-slate-700 text-white rounded-md hover:bg-slate-800 disabled:opacity-50 transition-colors"
             >
               {loading ? '⏳ Probando...' : '🧪 Probar Conexión'}
             </button>
@@ -321,15 +344,15 @@ export function TestingTab({
       {/* Resultado de Prueba */}
       {testResult && (
         <div
-          className={`border rounded-lg p-4 ${testResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+          className={`border rounded-lg p-4 ${testResult.success ? 'bg-slate-50 border-slate-200' : 'bg-red-50 border-red-200'}`}
         >
           <h4
-            className={`font-semibold mb-2 ${testResult.success ? 'text-green-800' : 'text-red-800'}`}
+            className={`font-semibold mb-2 ${testResult.success ? 'text-slate-800' : 'text-red-800'}`}
           >
             {testResult.success ? '✅ Prueba Exitosa' : '❌ Prueba Fallida'}
           </h4>
           <p
-            className={`text-sm ${testResult.success ? 'text-green-700' : 'text-red-700'}`}
+            className={`text-sm ${testResult.success ? 'text-slate-700' : 'text-red-700'}`}
           >
             {testResult.message}
           </p>
@@ -355,7 +378,7 @@ export function TestingTab({
                 <pre className="text-sm text-white overflow-x-auto">{curlHealth}</pre>
                        <button
                          onClick={() => copyToClipboard(curlHealth, showToast)}
-                         className="mt-2 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+                         className="mt-2 px-3 py-1 bg-slate-700 text-white rounded-md hover:bg-slate-800 transition-colors text-sm"
                        >
                          📋 Copiar
                        </button>
@@ -368,7 +391,7 @@ export function TestingTab({
                 <pre className="text-sm text-white overflow-x-auto">{curlCheques}</pre>
                        <button
                          onClick={() => copyToClipboard(curlCheques, showToast)}
-                         className="mt-2 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+                         className="mt-2 px-3 py-1 bg-slate-700 text-white rounded-md hover:bg-slate-800 transition-colors text-sm"
                        >
                          📋 Copiar
                        </button>
@@ -381,7 +404,7 @@ export function TestingTab({
                 <pre className="text-sm text-white overflow-x-auto">{curlCuenta}</pre>
                        <button
                          onClick={() => copyToClipboard(curlCuenta, showToast)}
-                         className="mt-2 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+                         className="mt-2 px-3 py-1 bg-slate-700 text-white rounded-md hover:bg-slate-800 transition-colors text-sm"
                        >
                          📋 Copiar
                        </button>
@@ -409,7 +432,7 @@ export function TestingTab({
               </p>
               <button 
                 onClick={handleOpenSwagger}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-slate-700 text-white rounded-md hover:bg-slate-800 transition-colors"
               >
                 📚 Abrir Swagger UI
               </button>

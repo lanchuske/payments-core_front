@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToastContext } from '@/contexts/ToastContext';
 import { nestjsApi } from '@/lib/api/nestjs-client';
-import { getAdminKey } from '@/lib/config';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 interface Transaction {
   id: string;
@@ -19,10 +19,9 @@ interface Transaction {
 }
 
 export function TransactionsTab() {
+  const { adminKey, logout } = useAdminAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
-  const [adminKey, setAdminKey] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState({
     type: '',
@@ -35,7 +34,7 @@ export function TransactionsTab() {
   const { showWarning, showError } = useToastContext();
 
   const loadTransactions = useCallback(async () => {
-    if (!isAuthenticated || !adminKey) return;
+    if (!adminKey) return;
 
     try {
       setLoading(true);
@@ -63,18 +62,19 @@ export function TransactionsTab() {
         adminKey,
       });
       
-      if (response.success && response.data) {
-        // El endpoint puede devolver un array directamente o dentro de data
-        const transactionsData = Array.isArray(response.data) 
-          ? response.data 
+      // Aceptar respuesta del BFF ({ data, total, page, limit }) o formato con success
+      if ((response.success !== false && response.data) || response.data) {
+        const transactionsData = Array.isArray(response.data)
+          ? response.data
           : (response.data.transactions || response.data.data || []);
         setTransactions(transactionsData);
         
         // Intentar obtener información de paginación
-        if (response.data.total !== undefined) {
-          setTotal(response.data.total);
-          setTotalPages(Math.ceil(response.data.total / filters.limit));
-        } else if (response.data.pagination) {
+        const totalVal = (response as { total?: number }).total ?? (response.data && typeof response.data === 'object' && 'total' in response.data ? (response.data as { total: number }).total : undefined);
+        if (totalVal !== undefined) {
+          setTotal(totalVal);
+          setTotalPages(Math.ceil(totalVal / filters.limit));
+        } else if (response.data && typeof response.data === 'object' && response.data.pagination) {
           setTotal(response.data.pagination.total || transactionsData.length);
           setTotalPages(response.data.pagination.totalPages || 1);
         } else {
@@ -111,22 +111,13 @@ export function TransactionsTab() {
     } finally {
       setLoading(false);
     }
-  }, [filters, page, showWarning, showError, isAuthenticated, adminKey]);
-
-  const handleAcceder = () => {
-    const validAdminKey = getAdminKey();
-    if (adminKey !== validAdminKey) {
-      showError('Clave de administrador incorrecta');
-      return;
-    }
-    setIsAuthenticated(true);
-  };
+  }, [filters, page, showWarning, showError, adminKey]);
 
   useEffect(() => {
-    if (isAuthenticated && adminKey) {
+    if (adminKey) {
       loadTransactions();
     }
-  }, [loadTransactions, isAuthenticated, adminKey]);
+  }, [loadTransactions, adminKey]);
 
   // Escuchar cambios de tenant
   useEffect(() => {
@@ -149,8 +140,8 @@ export function TransactionsTab() {
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       PENDING: 'bg-yellow-100 text-yellow-800',
-      PROCESSING: 'bg-blue-100 text-blue-800',
-      COMPLETED: 'bg-green-100 text-green-800',
+      PROCESSING: 'bg-slate-100 text-slate-800',
+      COMPLETED: 'bg-slate-100 text-slate-800',
       FAILED: 'bg-red-100 text-red-800',
       CANCELLED: 'bg-gray-100 text-gray-800',
     };
@@ -169,49 +160,6 @@ export function TransactionsTab() {
     return icons[type] || '💵';
   };
 
-  // Acceso restringido: pedir clave de administrador
-  if (!isAuthenticated) {
-    return (
-      <div className="p-6 bg-red-50 rounded-lg border border-red-200">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="flex justify-center items-center w-8 h-8 text-sm font-bold text-white bg-red-500 rounded-full">
-            🔒
-          </span>
-          <h3 className="text-lg font-semibold text-red-800">
-            Acceso Restringido - Solo Administradores
-          </h3>
-        </div>
-        <p className="mb-4 text-red-700">
-          Esta sección requiere la clave de administrador para ver las transacciones.
-        </p>
-        <div className="space-y-4">
-          <div>
-            <label className="block mb-2 text-sm font-medium text-red-700">
-              Clave de Administrador:
-            </label>
-            <div className="flex gap-4 items-center">
-              <input
-                type="password"
-                placeholder="Ingresa la clave de administrador"
-                value={adminKey}
-                onChange={(e) => setAdminKey(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAcceder()}
-                className="flex-1 px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={handleAcceder}
-                disabled={loading || !adminKey}
-                className="px-4 py-2 text-white bg-red-600 rounded-md transition-colors hover:bg-red-700 disabled:opacity-50"
-              >
-                {loading ? '⏳ Cargando...' : '🔐 Acceder'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -219,14 +167,13 @@ export function TransactionsTab() {
         <div className="flex gap-2">
           <button
             onClick={loadTransactions}
-            className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700"
+            className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800"
           >
             🔄 Actualizar
           </button>
           <button
             onClick={() => {
-              setIsAuthenticated(false);
-              setAdminKey('');
+              logout();
               setTransactions([]);
             }}
             className="px-4 py-2 text-white bg-gray-500 rounded-lg transition-colors hover:bg-gray-600"
@@ -291,7 +238,7 @@ export function TransactionsTab() {
       {/* Lista de transacciones */}
       {loading ? (
         <div className="py-12 text-center">
-          <div className="inline-block w-8 h-8 rounded-full border-b-2 border-blue-600 animate-spin"></div>
+          <div className="inline-block w-8 h-8 rounded-full border-b-2 border-slate-600 animate-spin"></div>
           <p className="mt-4 text-gray-600">Cargando transacciones...</p>
         </div>
       ) : transactions.length === 0 ? (
@@ -355,7 +302,7 @@ export function TransactionsTab() {
                     <td className="px-6 py-4 text-sm whitespace-nowrap">
                       <button
                         onClick={() => setSelectedTransaction(transaction)}
-                        className="font-medium text-blue-600 hover:text-blue-800"
+                        className="font-medium text-slate-700 hover:text-slate-900"
                       >
                         Ver Detalle
                       </button>

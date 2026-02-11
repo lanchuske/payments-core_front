@@ -5,7 +5,9 @@ export interface Tenant {
   name: string;
   code: string;
   cuit: string;
-  is_active: boolean;
+  /** Backend puede enviar snake_case (is_active) o camelCase (isActive) */
+  is_active?: boolean;
+  isActive?: boolean;
   status?: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   updatedAt?: string;
@@ -22,6 +24,10 @@ export interface LogEntry {
   timestamp: string;
   message: string;
   level: 'info' | 'error' | 'warning';
+  url?: string;
+  method?: string;
+  tenantId?: string;
+  action?: string;
 }
 
 export interface TenantData {

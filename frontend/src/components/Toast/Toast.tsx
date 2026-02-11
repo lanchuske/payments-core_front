@@ -17,18 +17,11 @@ export function Toast({ message, type, duration = 5000, onClose }: ToastProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Solo crear el timer si no existe uno previo
     if (!timerRef.current) {
-      console.log('🕐 Creando timer para cierre automático en', duration, 'ms');
-      timerRef.current = setTimeout(() => {
-        console.log('🕐 Timer ejecutado - cerrando toast automáticamente');
-        onClose();
-      }, duration);
+      timerRef.current = setTimeout(() => onClose(), duration);
     }
-
     return () => {
       if (timerRef.current) {
-        console.log('🧹 Limpiando timer del toast');
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
@@ -36,22 +29,17 @@ export function Toast({ message, type, duration = 5000, onClose }: ToastProps) {
   }, [duration, onClose]);
 
   const getToastStyles = () => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-500 border-green-600 text-white';
-      case 'error':
-        return 'bg-red-500 border-red-600 text-white';
-      case 'warning':
-        return 'bg-yellow-500 border-yellow-600 text-white';
-      case 'info':
-        return 'bg-blue-500 border-blue-600 text-white';
-      default:
-        return 'bg-gray-500 border-gray-600 text-white';
-    }
+    const base = 'bg-white border border-slate-200 text-slate-800 shadow-lg';
+    const leftBorder = {
+      success: 'border-l-4 border-l-emerald-500',
+      error: 'border-l-4 border-l-red-500',
+      warning: 'border-l-4 border-l-amber-500',
+      info: 'border-l-4 border-l-slate-500',
+    };
+    return `${base} ${leftBorder[type] || leftBorder.info}`;
   };
 
   const handleClose = () => {
-    console.log('❌ Cierre manual del toast');
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -78,13 +66,14 @@ export function Toast({ message, type, duration = 5000, onClose }: ToastProps) {
       onMouseLeave={handleMouseLeave}
     >
       <div
-        className={`${getToastStyles()} rounded-lg shadow-xl border-l-4 p-4 backdrop-blur-sm relative`}
+        className={`${getToastStyles()} rounded-xl p-4 relative min-w-[280px] max-w-sm`}
       >
-        <span className="text-sm font-medium pr-6">{message}</span>
+        <span className="text-sm font-medium text-slate-800 pr-8 block">{message}</span>
         {showCloseButton && (
           <button
             onClick={handleClose}
-            className="absolute top-2 right-2 text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-white/20"
+            className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-md hover:bg-slate-100"
+            aria-label="Cerrar"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path

@@ -426,7 +426,7 @@ class NestJSApiClient {
     tenantId: string;
     fromAccountId: string;
     toAccountId?: string;
-    destinationCbu: string;
+    destinationCbu?: string;
     amount: number;
     currency: string;
     description?: string;
@@ -477,6 +477,27 @@ class NestJSApiClient {
   async getPaymentLinks(tenantId: string, status?: string): Promise<NestJSResponse<any>> {
     const response = await this.client.get('api/digital-payments/payment-links', {
       params: { tenantId, status, adminKey: getAdminKey() },
+    });
+    return response.data;
+  }
+
+  /** Links de recepción OPP (onboarding): OPPs notificadas/aceptadas con su link para el receptor */
+  async getOppReceiveLinks(tenantId: string): Promise<
+    NestJSResponse<
+      {
+        id: string;
+        beneficiarioNombre: string;
+        amount: string;
+        currency: string;
+        status: string;
+        linkToken: string | null;
+        linkTokenUsedAt: string | null;
+        createdAt: string;
+      }[]
+    >
+  > {
+    const response = await this.client.get('api/digital-payments/opp-receive-links', {
+      params: { tenantId, adminKey: getAdminKey() },
     });
     return response.data;
   }

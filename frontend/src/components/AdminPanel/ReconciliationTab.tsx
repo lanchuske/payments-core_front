@@ -240,7 +240,7 @@ export function ReconciliationTab() {
         <h2 className="text-2xl font-bold text-gray-800">Conciliación Bancaria</h2>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700"
+          className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800"
         >
           {showForm ? '✕ Cancelar' : '+ Nueva Conciliación'}
         </button>
@@ -326,7 +326,7 @@ export function ReconciliationTab() {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
               >
                 {loading ? 'Iniciando...' : 'Iniciar Conciliación'}
               </button>
@@ -361,8 +361,8 @@ export function ReconciliationTab() {
             )}
           </div>
           {currentReconciliationId && (
-            <div className="p-2 mb-2 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800">
+            <div className="p-2 mb-2 bg-slate-50 rounded-lg border border-slate-200">
+              <p className="text-sm text-slate-800">
                 <strong>Conciliación activa:</strong> {currentReconciliationId.substring(0, 8)}...
               </p>
             </div>
@@ -370,7 +370,7 @@ export function ReconciliationTab() {
           <button
             onClick={handleFileUpload}
             disabled={!selectedFile || uploading || !currentReconciliationId}
-            className="px-4 py-2 text-white bg-green-600 rounded-lg transition-colors hover:bg-green-700 disabled:opacity-50"
+            className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
           >
             {uploading ? 'Subiendo...' : 'Subir Extracto'}
           </button>
@@ -394,7 +394,7 @@ export function ReconciliationTab() {
         </div>
         {loadingReconciliations ? (
           <div className="py-12 text-center">
-            <div className="inline-block w-8 h-8 rounded-full border-b-2 border-blue-600 animate-spin"></div>
+            <div className="inline-block w-8 h-8 rounded-full border-b-2 border-slate-600 animate-spin"></div>
             <p className="mt-4 text-gray-600">Cargando conciliaciones...</p>
           </div>
         ) : reconciliations.length === 0 ? (
@@ -439,11 +439,11 @@ export function ReconciliationTab() {
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           reconciliation.status === 'COMPLETED'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-slate-100 text-slate-800'
                             : reconciliation.status === 'FAILED'
                             ? 'bg-red-100 text-red-800'
                             : reconciliation.status === 'PROCESSING'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-slate-100 text-slate-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >

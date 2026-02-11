@@ -4,6 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToastContext } from '@/contexts/ToastContext';
 import { nestjsApi } from '@/lib/api/nestjs-client';
 
+const DESTINATION_EXTERNAL = '__EXTERNAL__';
+
+interface AccountOption {
+  id: string;
+  cbu: string;
+  accountNumber: string;
+  tenantId: string;
+}
+
 interface TransferForm {
   fromAccountId: string;
   toAccountId: string;
@@ -29,11 +38,29 @@ interface Transfer {
   updatedAt: string;
 }
 
+function getTenantId(): string {
+  if (typeof window === 'undefined') return '';
+  const tenantId = localStorage.getItem('tenantId');
+  if (tenantId) return tenantId;
+  try {
+    const storedCreds = localStorage.getItem('echeq-credentials');
+    if (storedCreds) {
+      const creds = JSON.parse(storedCreds);
+      if (creds.tenantId) return creds.tenantId;
+    }
+  } catch {
+    // ignore
+  }
+  return '';
+}
+
 export function TransfersTab() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loadingTransfers, setLoadingTransfers] = useState(true);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [formData, setFormData] = useState<TransferForm>({
     fromAccountId: '',
     toAccountId: '',
@@ -45,6 +72,26 @@ export function TransfersTab() {
     beneficiaryCuit: '',
   });
   const { showError, showSuccess } = useToastContext();
+
+  const loadAccounts = useCallback(async () => {
+    const tenantId = getTenantId();
+    if (!tenantId) {
+      setAccounts([]);
+      return;
+    }
+    try {
+      setLoadingAccounts(true);
+      const res = await nestjsApi.getAccounts(tenantId);
+      const data = (res as { data?: AccountOption[] })?.data ?? (res as unknown as AccountOption[]);
+      setAccounts(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Error loading accounts:', e);
+      showError('Error al cargar cuentas del tenant');
+      setAccounts([]);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  }, [showError]);
 
   const loadTransfers = useCallback(async () => {
     try {
@@ -85,18 +132,20 @@ export function TransfersTab() {
 
   useEffect(() => {
     loadTransfers();
-  }, [loadTransfers]);
+    loadAccounts();
+  }, [loadTransfers, loadAccounts]);
 
   // Escuchar cambios de tenant
   useEffect(() => {
     const handleTenantChange = () => {
       loadTransfers();
+      loadAccounts();
     };
     if (typeof window !== 'undefined') {
       window.addEventListener('tenantChanged', handleTenantChange);
       return () => window.removeEventListener('tenantChanged', handleTenantChange);
     }
-  }, [loadTransfers]);
+  }, [loadTransfers, loadAccounts]);
 
   const validateCbu = (cbu: string): boolean => {
     // Validación básica de CBU (22 dígitos)
@@ -119,35 +168,46 @@ export function TransfersTab() {
       return;
     }
 
-    if (!validateCbu(formData.destinationCbu)) {
-      showError('CBU inválido. Debe tener 22 dígitos');
-      return;
-    }
-
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       showError('El monto debe ser mayor a 0');
       return;
     }
 
+    // CBU se valida solo cuando destino es externo (más abajo)
     if (!formData.fromAccountId) {
       showError('La cuenta de origen es requerida');
       return;
     }
 
+    const isExternal = formData.toAccountId === DESTINATION_EXTERNAL;
+    if (!formData.toAccountId) {
+      showError('Seleccioná una cuenta destino o CBU/CVU externo');
+      return;
+    }
+    if (isExternal) {
+      if (!validateCbu(formData.destinationCbu)) {
+        showError('CBU inválido. Debe tener 22 dígitos');
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
-      const response = await nestjsApi.createTransfer({
+      const payload = {
         tenantId: tenantId!,
         fromAccountId: formData.fromAccountId,
-        toAccountId: formData.toAccountId,
-        destinationCbu: formData.destinationCbu,
         amount: parseFloat(formData.amount),
         currency: formData.currency,
         description: formData.description,
         beneficiaryName: formData.beneficiaryName,
         beneficiaryCuit: formData.beneficiaryCuit,
-      });
+        ...(isExternal
+          ? { destinationCbu: formData.destinationCbu }
+          : { toAccountId: formData.toAccountId }),
+      };
+
+      const response = await nestjsApi.createTransfer(payload);
       
       if (response.success) {
         showSuccess('Transferencia creada exitosamente');
@@ -200,7 +260,7 @@ export function TransfersTab() {
         <h2 className="text-2xl font-bold text-gray-800">Transferencias Bancarias</h2>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700"
+          className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800"
         >
           {showForm ? '✕ Cancelar' : '+ Nueva Transferencia'}
         </button>
@@ -209,23 +269,77 @@ export function TransfersTab() {
       {showForm && (
         <div className="p-6 bg-white rounded-lg border border-gray-200">
           <h3 className="mb-4 text-lg font-semibold text-gray-800">Nueva Transferencia</h3>
+          {accounts.length === 0 && !loadingAccounts && (
+            <p className="mb-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              Creá al menos una cuenta en la pestaña <strong>Cuentas</strong> para poder enviar transferencias.
+            </p>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block mb-1 text-sm font-medium text-gray-700">
-                  CBU/CVU Destino *
+                  Cuenta Origen *
                 </label>
-                <input
-                  type="text"
-                  value={formData.destinationCbu}
-                  onChange={(e) => setFormData({ ...formData, destinationCbu: e.target.value })}
-                  placeholder="0000000000000000000000"
-                  maxLength={22}
+                <select
+                  value={formData.fromAccountId}
+                  onChange={(e) => setFormData({ ...formData, fromAccountId: e.target.value })}
                   className="px-3 py-2 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
                   required
-                />
-                <p className="mt-1 text-xs text-gray-500">22 dígitos</p>
+                  disabled={loadingAccounts || accounts.length === 0}
+                >
+                  <option value="">Seleccionar cuenta origen</option>
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.accountNumber || acc.cbu || acc.id}
+                    </option>
+                  ))}
+                </select>
               </div>
+              <div>
+                <label className="block mb-1 text-sm font-medium text-gray-700">
+                  Cuenta Destino
+                </label>
+                <select
+                  value={formData.toAccountId}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      toAccountId: e.target.value,
+                      ...(e.target.value !== DESTINATION_EXTERNAL ? { destinationCbu: '' } : {}),
+                    })
+                  }
+                  className="px-3 py-2 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
+                  disabled={loadingAccounts || accounts.length === 0}
+                >
+                  <option value="">Seleccionar cuenta o CBU externo</option>
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.accountNumber || acc.cbu || acc.id}
+                    </option>
+                  ))}
+                  <option value={DESTINATION_EXTERNAL}>CBU/CVU externo</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Cuenta del tenant o CBU externo
+                </p>
+              </div>
+              {formData.toAccountId === DESTINATION_EXTERNAL && (
+                <div className="col-span-2">
+                  <label className="block mb-1 text-sm font-medium text-gray-700">
+                    CBU/CVU Destino *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.destinationCbu}
+                    onChange={(e) => setFormData({ ...formData, destinationCbu: e.target.value })}
+                    placeholder="0000000000000000000000"
+                    maxLength={22}
+                    className="px-3 py-2 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
+                    required={formData.toAccountId === DESTINATION_EXTERNAL}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">22 dígitos</p>
+                </div>
+              )}
               <div>
                 <label className="block mb-1 text-sm font-medium text-gray-700">
                   Monto *
@@ -322,7 +436,7 @@ export function TransfersTab() {
         </div>
         {loadingTransfers ? (
           <div className="py-12 text-center">
-            <div className="inline-block w-8 h-8 rounded-full border-b-2 border-blue-600 animate-spin"></div>
+            <div className="inline-block w-8 h-8 rounded-full border-b-2 border-slate-600 animate-spin"></div>
             <p className="mt-4 text-gray-600">Cargando transferencias...</p>
           </div>
         ) : transfers.length === 0 ? (
@@ -373,11 +487,11 @@ export function TransfersTab() {
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           transfer.status === 'COMPLETED'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-slate-100 text-slate-800'
                             : transfer.status === 'FAILED'
                             ? 'bg-red-100 text-red-800'
                             : transfer.status === 'PROCESSING'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-slate-100 text-slate-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >

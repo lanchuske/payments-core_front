@@ -317,14 +317,14 @@ export function ReportsTab() {
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              className="text-slate-700 rounded border-slate-300 focus:ring-slate-400"
             />
             <span>Auto-refresh (30s)</span>
           </label>
           <button
             onClick={() => loadMetrics()}
             disabled={loading}
-            className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
           >
             🔄 Actualizar Métricas
           </button>
@@ -336,7 +336,7 @@ export function ReportsTab() {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">Métricas en Tiempo Real</h3>
           {autoRefresh && (
-            <span className="px-2 py-1 text-xs text-green-600 bg-green-50 rounded-full">
+            <span className="px-2 py-1 text-xs text-slate-700 bg-slate-100 rounded-full">
               🔄 Actualizando automáticamente
             </span>
           )}
@@ -351,17 +351,17 @@ export function ReportsTab() {
             <div>
               <h4 className="mb-3 text-sm font-semibold text-gray-700">Transacciones</h4>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="mb-1 text-xs text-gray-600">Total</p>
-                  <p className="text-2xl font-bold text-blue-600">{metrics.transactions?.total || 0}</p>
+                  <p className="text-2xl font-bold text-slate-800">{metrics.transactions?.total || 0}</p>
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="mb-1 text-xs text-gray-600">Hoy</p>
-                  <p className="text-2xl font-bold text-green-600">{metrics.transactions?.today || 0}</p>
+                  <p className="text-2xl font-bold text-slate-800">{metrics.transactions?.today || 0}</p>
                 </div>
                 <div className="p-4 bg-purple-50 rounded-lg">
                   <p className="mb-1 text-xs text-gray-600">Esta Semana</p>
-                  <p className="text-2xl font-bold text-purple-600">{metrics.transactions?.thisWeek || 0}</p>
+                  <p className="text-2xl font-bold text-slate-800">{metrics.transactions?.thisWeek || 0}</p>
                 </div>
                 <div className="p-4 bg-indigo-50 rounded-lg">
                   <p className="mb-1 text-xs text-gray-600">Este Mes</p>
@@ -374,9 +374,9 @@ export function ReportsTab() {
             <div>
               <h4 className="mb-3 text-sm font-semibold text-gray-700">Por Estado</h4>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                <div className="p-4 bg-green-50 rounded-lg">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="mb-1 text-xs text-gray-600">Completadas</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-slate-800">
                     {metrics.transactions?.byStatus?.COMPLETED || 0}
                   </p>
                 </div>
@@ -405,21 +405,21 @@ export function ReportsTab() {
             <div>
               <h4 className="mb-3 text-sm font-semibold text-gray-700">Volúmenes (ARS)</h4>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-                <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="mb-1 text-xs text-gray-600">Total</p>
-                  <p className="text-xl font-bold text-blue-600">
+                  <p className="text-xl font-bold text-slate-800">
                     ${(metrics.volume?.total || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="mb-1 text-xs text-gray-600">Hoy</p>
-                  <p className="text-xl font-bold text-green-600">
+                  <p className="text-xl font-bold text-slate-800">
                     ${(metrics.volume?.today || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="p-4 bg-purple-50 rounded-lg">
                   <p className="mb-1 text-xs text-gray-600">Esta Semana</p>
-                  <p className="text-xl font-bold text-purple-600">
+                  <p className="text-xl font-bold text-slate-800">
                     ${(metrics.volume?.thisWeek || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -442,9 +442,9 @@ export function ReportsTab() {
             <div>
               <h4 className="mb-3 text-sm font-semibold text-gray-700">Performance</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="p-4 bg-green-50 rounded-lg">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="mb-1 text-xs text-gray-600">Tasa de Éxito</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-slate-800">
                     {(metrics.performance?.successRate || 0).toFixed(2)}%
                   </p>
                 </div>
@@ -454,9 +454,9 @@ export function ReportsTab() {
                     {(metrics.performance?.failureRate || 0).toFixed(2)}%
                   </p>
                 </div>
-                <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <p className="mb-1 text-xs text-gray-600">Tiempo Promedio</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-slate-800">
                     {(metrics.performance?.averageProcessingTime || 0).toFixed(2)}s
                   </p>
                 </div>
@@ -469,13 +469,13 @@ export function ReportsTab() {
               <div className="grid grid-cols-2 gap-4">
                 <div className={`rounded-lg p-4 ${
                   (metrics.trends?.dailyGrowth || 0) >= 0 
-                    ? 'bg-green-50' 
+                    ? 'bg-slate-50' 
                     : 'bg-red-50'
                 }`}>
                   <p className="mb-1 text-xs text-gray-600">Crecimiento Diario</p>
                   <p className={`text-2xl font-bold ${
                     (metrics.trends?.dailyGrowth || 0) >= 0 
-                      ? 'text-green-600' 
+                      ? 'text-slate-800' 
                       : 'text-red-600'
                   }`}>
                     {(metrics.trends?.dailyGrowth || 0) >= 0 ? '+' : ''}
@@ -484,13 +484,13 @@ export function ReportsTab() {
                 </div>
                 <div className={`rounded-lg p-4 ${
                   (metrics.trends?.weeklyGrowth || 0) >= 0 
-                    ? 'bg-green-50' 
+                    ? 'bg-slate-50' 
                     : 'bg-red-50'
                 }`}>
                   <p className="mb-1 text-xs text-gray-600">Crecimiento Semanal</p>
                   <p className={`text-2xl font-bold ${
                     (metrics.trends?.weeklyGrowth || 0) >= 0 
-                      ? 'text-green-600' 
+                      ? 'text-slate-800' 
                       : 'text-red-600'
                   }`}>
                     {(metrics.trends?.weeklyGrowth || 0) >= 0 ? '+' : ''}
@@ -564,7 +564,7 @@ export function ReportsTab() {
           <button
             onClick={generateReport}
             disabled={loading}
-            className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
           >
             {loading ? 'Generando...' : 'Generar Reporte'}
           </button>
@@ -582,14 +582,14 @@ export function ReportsTab() {
             <button
               onClick={() => exportBcraReport('csv')}
               disabled={loading}
-              className="px-4 py-2 text-white bg-green-600 rounded-lg transition-colors hover:bg-green-700 disabled:opacity-50"
+              className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
             >
               Exportar BCRA (CSV)
             </button>
             <button
               onClick={() => exportBcraReport('json')}
               disabled={loading}
-              className="px-4 py-2 text-white bg-green-600 rounded-lg transition-colors hover:bg-green-700 disabled:opacity-50"
+              className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
             >
               Exportar BCRA (JSON)
             </button>

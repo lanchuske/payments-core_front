@@ -30,6 +30,17 @@ interface PaymentLink {
   url?: string;
 }
 
+interface OppReceiveLink {
+  id: string;
+  beneficiarioNombre: string;
+  amount: string;
+  currency: string;
+  status: string;
+  linkToken: string | null;
+  linkTokenUsedAt: string | null;
+  createdAt: string;
+}
+
 /**
  * Helper para obtener el tenantId del localStorage de forma consistente
  */
@@ -61,7 +72,9 @@ export function PaymentLinksTab() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>([]);
+  const [oppReceiveLinks, setOppReceiveLinks] = useState<OppReceiveLink[]>([]);
   const [loadingLinks, setLoadingLinks] = useState(true);
+  const [loadingOppLinks, setLoadingOppLinks] = useState(true);
   const [formData, setFormData] = useState<PaymentLinkForm>({
     amount: '',
     currency: 'ARS',
@@ -105,9 +118,33 @@ export function PaymentLinksTab() {
     }
   }, [showError]);
 
+  const loadOppReceiveLinks = useCallback(async () => {
+    try {
+      setLoadingOppLinks(true);
+      const tenantId = getTenantId();
+      if (!tenantId) {
+        setOppReceiveLinks([]);
+        setLoadingOppLinks(false);
+        return;
+      }
+      const response = await nestjsApi.getOppReceiveLinks(tenantId);
+      const data = response?.data ?? response;
+      setOppReceiveLinks(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading OPP receive links:', error);
+      setOppReceiveLinks([]);
+    } finally {
+      setLoadingOppLinks(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadPaymentLinks();
   }, [loadPaymentLinks]);
+
+  useEffect(() => {
+    loadOppReceiveLinks();
+  }, [loadOppReceiveLinks]);
 
   // Escuchar cambios de tenant
   useEffect(() => {
@@ -220,13 +257,18 @@ export function PaymentLinksTab() {
     }
   };
 
+  const baseUrlOppReceive =
+    typeof window !== 'undefined'
+      ? (process.env.NEXT_PUBLIC_END_USER_URL || window.location.origin)
+      : '';
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Payment Links</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Payment Links y links de onboarding OPP</h2>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700"
+          className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800"
         >
           {showForm ? '✕ Cancelar' : '+ Crear Payment Link'}
         </button>
@@ -350,7 +392,7 @@ export function PaymentLinksTab() {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
               >
                 {loading ? 'Creando...' : 'Crear Payment Link'}
               </button>
@@ -360,31 +402,31 @@ export function PaymentLinksTab() {
       )}
 
       {createdLink && (
-        <div className="p-6 bg-green-50 rounded-lg border border-green-200">
-          <h3 className="mb-4 text-lg font-semibold text-green-800">✅ Payment Link Creado</h3>
+        <div className="p-5 rounded-lg border border-slate-200 bg-slate-50">
+          <h3 className="mb-3 text-base font-semibold text-slate-800">Payment link creado</h3>
           <div className="space-y-4">
             <div>
-              <label className="block mb-1 text-sm font-medium text-green-700">URL del Link</label>
+              <label className="block mb-1 text-sm font-medium text-slate-700">URL del link</label>
               <div className="flex items-center space-x-2">
                 <input
                   type="text"
                   value={createdLink.url}
                   readOnly
-                  className="flex-1 px-3 py-2 bg-white rounded-lg border border-green-300"
+                  className="flex-1 px-3 py-2 bg-white rounded-lg border border-slate-300"
                 />
                 <button
                   onClick={() => copyToClipboard(createdLink.url)}
-                  className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
+                  className="px-4 py-2 text-white bg-slate-700 rounded-lg hover:bg-slate-800"
                 >
                   Copiar
                 </button>
               </div>
             </div>
             <div>
-              <label className="block mb-2 text-sm font-medium text-green-700">Código QR</label>
+              <label className="block mb-2 text-sm font-medium text-slate-700">Código QR</label>
               <div className="flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={createdLink.qrCode} alt="QR Code" className="w-48 h-48 rounded-lg border border-green-300" />
+                <img src={createdLink.qrCode} alt="QR Code" className="w-48 h-48 rounded-lg border border-slate-300" />
               </div>
             </div>
           </div>
@@ -403,7 +445,7 @@ export function PaymentLinksTab() {
         </div>
         {loadingLinks ? (
           <div className="py-12 text-center">
-            <div className="inline-block w-8 h-8 rounded-full border-b-2 border-blue-600 animate-spin"></div>
+            <div className="inline-block w-8 h-8 rounded-full border-b-2 border-slate-600 animate-spin"></div>
             <p className="mt-4 text-gray-600">Cargando payment links...</p>
           </div>
         ) : paymentLinks.length === 0 ? (
@@ -454,7 +496,7 @@ export function PaymentLinksTab() {
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           link.status === 'PAID'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-slate-100 text-slate-800'
                             : link.status === 'EXPIRED'
                             ? 'bg-red-100 text-red-800'
                             : link.status === 'CANCELLED'
@@ -475,6 +517,117 @@ export function PaymentLinksTab() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                       {new Date(link.createdAt).toLocaleString('es-AR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="overflow-hidden bg-white rounded-lg border border-gray-200 mt-8">
+        <div className="flex justify-between items-center p-4 border-b border-gray-200">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">Links de recepción OPP (onboarding)</h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Links generados para que el receptor acepte o rechace la OPP. Se crean al notificar una OPP.
+            </p>
+          </div>
+          <button
+            onClick={loadOppReceiveLinks}
+            className="px-3 py-1 text-sm bg-gray-100 rounded-lg transition-colors hover:bg-gray-200"
+          >
+            🔄 Actualizar
+          </button>
+        </div>
+        {loadingOppLinks ? (
+          <div className="py-12 text-center">
+            <div className="inline-block w-8 h-8 rounded-full border-b-2 border-slate-600 animate-spin"></div>
+            <p className="mt-4 text-gray-600">Cargando links OPP...</p>
+          </div>
+        ) : oppReceiveLinks.length === 0 ? (
+          <div className="py-12 text-center bg-gray-50">
+            <p className="mb-2 text-gray-600">No hay links de recepción OPP</p>
+            <p className="text-sm text-gray-500">
+              Los links se generan al emitir y notificar una OPP (Orden de Pago Posdatada)
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Beneficiario
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Monto
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Link
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Fecha
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {oppReceiveLinks.map((row) => (
+                  <tr key={row.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                      {row.beneficiarioNombre}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                      {row.currency} {Number(row.amount).toLocaleString('es-AR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          row.status === 'ACEPTADA'
+                            ? 'bg-green-100 text-green-800'
+                            : row.status === 'NOTIFICADA'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {row.linkToken ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={`${baseUrlOppReceive}/end-user/opp/receive?token=${row.linkToken}`}
+                            className="flex-1 min-w-0 px-2 py-1 text-xs font-mono bg-gray-50 rounded border border-gray-200"
+                          />
+                          <button
+                            onClick={() =>
+                              copyToClipboard(
+                                `${baseUrlOppReceive}/end-user/opp/receive?token=${row.linkToken}`,
+                              )
+                            }
+                            className="px-2 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700"
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-xs">
+                          Ya utilizado
+                          {row.linkTokenUsedAt
+                            ? ` · ${new Date(row.linkTokenUsedAt).toLocaleString('es-AR')}`
+                            : ''}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                      {new Date(row.createdAt).toLocaleString('es-AR')}
                     </td>
                   </tr>
                 ))}

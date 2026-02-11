@@ -102,29 +102,35 @@ export function TenantSelector() {
     return null; // No mostrar selector si no hay tenants
   }
 
+  const selectedTenant = tenants.find(
+    (t) => (t.tenantId || t.id) === selectedTenantId
+  );
+  const selectedDisplayName = selectedTenant
+    ? selectedTenant.name || selectedTenant.tenantId || selectedTenant.id
+    : selectedTenantId || '—';
+
   return (
-    <div className="flex items-center space-x-2">
-      <label className="text-sm font-medium text-white/80">Tenant:</label>
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-slate-500">Operando con:</span>
       <select
         value={selectedTenantId}
         onChange={(e) => handleTenantChange(e.target.value)}
         disabled={loading}
-        className="px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+        className="px-3 py-1.5 min-w-[180px] bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 disabled:opacity-50"
+        title={`Tenant actual: ${selectedDisplayName}`}
       >
         {loading ? (
-          <option>Cargando...</option>
+          <option value="">Cargando...</option>
         ) : (
-          <>
-            {tenants.map((tenant) => {
-              const tenantIdValue = tenant.tenantId || tenant.id;
-              const displayName = tenant.name || tenant.tenantId || tenant.id;
-              return (
-                <option key={tenant.id} value={tenantIdValue} className="text-gray-900">
-                  {displayName}
-                </option>
-              );
-            })}
-          </>
+          tenants.map((tenant) => {
+            const tenantIdValue = tenant.tenantId || tenant.id;
+            const displayName = tenant.name || tenant.tenantId || tenant.id;
+            return (
+              <option key={tenant.id} value={tenantIdValue}>
+                {displayName}
+              </option>
+            );
+          })
         )}
       </select>
     </div>

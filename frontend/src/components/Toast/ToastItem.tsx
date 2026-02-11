@@ -15,15 +15,9 @@ export function ToastItem({ id, message, type, duration = 5000, onClose }: Toast
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Crear timer para cierre automático
-    timerRef.current = setTimeout(() => {
-      console.log('🕐 Timer ejecutado - cerrando toast automáticamente');
-      onClose(id);
-    }, duration);
-
+    timerRef.current = setTimeout(() => onClose(id), duration);
     return () => {
       if (timerRef.current) {
-        console.log('🧹 Limpiando timer del toast');
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
@@ -31,7 +25,6 @@ export function ToastItem({ id, message, type, duration = 5000, onClose }: Toast
   }, [duration, onClose, id]);
 
   const handleClose = () => {
-    console.log('❌ Cierre manual del toast');
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;

@@ -202,6 +202,44 @@ class BFFClient {
   }
 
   /**
+   * Eliminar tenant permanentemente (admin) - DELETE /tenants/:id/admin en core-bff
+   * @param {string} id - ID del tenant
+   * @param {string} adminKey - Clave de administrador
+   * @returns {Promise<Object>}
+   */
+  async deleteTenantAdmin(id, adminKey) {
+    const response = await this.client.delete(`/tenants/${id}/admin`, {
+      data: { adminKey },
+    });
+    return response.data;
+  }
+
+  /**
+   * Actualizar estado del tenant (admin) - para restaurar de papelera o mover a papelera
+   * @param {string} id - ID del tenant
+   * @param {string} status - 'ACTIVE' | 'INACTIVE'
+   * @param {string} adminKey - Clave de administrador
+   * @returns {Promise<Object>}
+   */
+  async updateTenantStatusAdmin(id, status, adminKey) {
+    const response = await this.client.patch(`/tenants/${id}/status/admin`, {
+      status,
+      adminKey,
+    });
+    return response.data;
+  }
+
+  /**
+   * Restaurar tenant (POST /tenants/:id/restore en core-bff)
+   * @param {string} id - ID del tenant
+   * @returns {Promise<Object>}
+   */
+  async restoreTenant(id) {
+    const response = await this.client.post(`/tenants/${id}/restore`);
+    return response.data;
+  }
+
+  /**
    * Obtener credenciales del tenant
    * @param {string} id - ID del tenant
    * @returns {Promise<Object>}

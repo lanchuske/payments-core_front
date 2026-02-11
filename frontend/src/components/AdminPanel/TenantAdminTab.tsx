@@ -5,31 +5,23 @@ import { Tenant, Credentials } from '@/types';
 import { apiService, setStoredCredentials } from '@/lib/api-migrated';
 import { copyToClipboard } from '@/lib/utils';
 import { useToast } from '@/hooks/useToast';
-import { getAdminKey } from '@/lib/config';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 interface TenantAdminTabProps {
   onCredentialsGenerated?: (credentials: Credentials) => void;
 }
 
 export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) {
+  const { adminKey, logout } = useAdminAuth();
   const [loading, setLoading] = useState(false);
-  const [adminKey, setAdminKey] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [tenantsList, setTenantsList] = useState<Tenant[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [generatedCredentials, setGeneratedCredentials] = useState<Credentials | null>(null);
-  const [viewMode, setViewMode] = useState<'active' | 'trash'>('active'); // Toggle entre activos y papelera
+  const [viewMode, setViewMode] = useState<'active' | 'trash'>('active');
   const { showSuccess, showError, showToast } = useToast();
 
   const handleLoadTenants = async (mode: 'active' | 'trash' = 'active') => {
-    const validAdminKey = getAdminKey();
-    console.log('🔍 [DEBUG] Clave ingresada:', adminKey);
-    console.log('🔍 [DEBUG] Clave esperada:', validAdminKey);
-    console.log('🔍 [DEBUG] Comparación:', adminKey === validAdminKey);
-    if (adminKey !== validAdminKey) {
-      showError('Clave de administrador incorrecta');
-      return;
-    }
+    if (!adminKey) return;
 
     setLoading(true);
 
@@ -37,8 +29,6 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
       const result = mode === 'active' 
         ? await apiService.getActiveTenants(adminKey)
         : await apiService.getInactiveTenants(adminKey);
-
-      console.log('🔍 [DEBUG] Resultado de getActiveTenants/getInactiveTenants:', result);
 
       if (result.data.success && result.data.data) {
         // El backend puede devolver {data: {tenants: [...]}} o {data: [...]}
@@ -59,15 +49,11 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
             tenantsArray = dataObj.data as Tenant[];
           }
         }
-        
-        console.log('🔍 [DEBUG] Tenants extraídos:', tenantsArray);
-        
+
         setTenantsList(tenantsArray);
-        setIsAuthenticated(true);
         setViewMode(mode);
         showSuccess(`Tenants ${mode === 'active' ? 'activos' : 'en papelera'} cargados exitosamente (${tenantsArray.length})`, 2000);
       } else {
-        console.error('🔍 [DEBUG] Error en respuesta:', result.data);
         showError(`Error cargando tenants: ${result.data.message || 'Respuesta inválida del servidor'}`);
       }
     } catch (error: unknown) {
@@ -79,11 +65,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   };
 
   const handleLoadTenantCredentials = async (tenant: Tenant) => {
-    const validAdminKey = getAdminKey();
-    if (adminKey !== validAdminKey) {
-      showError('Clave de administrador incorrecta');
-      return;
-    }
+    if (!adminKey) return;
 
     const tenantId = (tenant as Tenant & { tenantId?: string }).id || (tenant as Tenant & { tenantId?: string }).tenantId;
     if (!tenantId || tenantId === 'tenantId') {
@@ -105,16 +87,16 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
         const sandboxCreds = responseData.sandbox_credentials as Record<string, unknown> | undefined;
         if (sandboxCreds && typeof sandboxCreds === 'object' && Object.keys(sandboxCreds).length > 0) {
           creds = {
-            apiKey: String(sandboxCreds.apiKey || ''),
-            apiSecret: String(sandboxCreds.apiSecret || ''),
-            tenantId: String(sandboxCreds.tenantId || '')
+            apiKey: String(sandboxCreds.apiKey || sandboxCreds.api_key || ''),
+            apiSecret: String(sandboxCreds.apiSecret || sandboxCreds.api_secret || ''),
+            tenantId: String(sandboxCreds.tenantId || sandboxCreds.tenant_id || '')
           };
         } else {
-          // Credenciales directas del backend NestJS
+          // Credenciales directas del backend (camelCase o snake_case)
           creds = {
-            apiKey: String(responseData.apiKey || ''),
-            apiSecret: String(responseData.apiSecret || ''),
-            tenantId: String(responseData.tenantId || '')
+            apiKey: String(responseData.apiKey || responseData.api_key || ''),
+            apiSecret: String(responseData.apiSecret || responseData.api_secret || ''),
+            tenantId: String(responseData.tenantId || responseData.tenant_id || '')
           };
         }
         
@@ -149,17 +131,57 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
     }
   };
 
-  const handleAdminKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleLoadTenants();
+  const handleGenerateTenantCredentials = async (tenant: Tenant) => {
+    if (!adminKey) return;
+
+    const tenantId = (tenant as Tenant & { tenantId?: string }).id || (tenant as Tenant & { tenantId?: string }).tenantId;
+    if (!tenantId || tenantId === 'tenantId') {
+      showError('ID del tenant no disponible');
+      return;
+    }
+
+    setLoading(true);
+    setSelectedTenant(tenant);
+
+    try {
+      const result = await apiService.generateKeys(tenantId);
+
+      if (result.data && typeof result.data === 'object' && 'data' in result.data && result.data.data) {
+        const responseData = (result.data as { data: Record<string, unknown> }).data;
+        const sandboxCreds = responseData.sandbox_credentials as Record<string, unknown> | undefined;
+        const creds: Credentials = sandboxCreds && typeof sandboxCreds === 'object' && Object.keys(sandboxCreds).length > 0
+          ? {
+              apiKey: String(sandboxCreds.apiKey || sandboxCreds.api_key || ''),
+              apiSecret: String(sandboxCreds.apiSecret || sandboxCreds.api_secret || ''),
+              tenantId: String(sandboxCreds.tenantId || sandboxCreds.tenant_id || tenantId)
+            }
+          : {
+              apiKey: String(responseData.apiKey || responseData.api_key || ''),
+              apiSecret: String(responseData.apiSecret || responseData.api_secret || ''),
+              tenantId: String(responseData.tenantId || responseData.tenant_id || tenantId)
+            };
+        setGeneratedCredentials(creds);
+        setStoredCredentials(creds);
+        if (onCredentialsGenerated) onCredentialsGenerated(creds);
+        showSuccess('Credenciales generadas exitosamente', 2000);
+        setTimeout(() => {
+          const el = document.getElementById('admin-generated-credentials');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500);
+      } else {
+        const msg = (result.data as { message?: string })?.message || 'Error al generar credenciales';
+        showError(msg);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      showError(`Error generando credenciales: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDeleteTenant = async (tenant: Tenant) => {
-    if (adminKey !== getAdminKey()) {
-      showError('Clave de administrador incorrecta');
-      return;
-    }
+    if (!adminKey) return;
 
     if (!confirm(`¿Estás seguro de que quieres mover a papelera el tenant "${tenant.name}"?\n\nPodrás restaurarlo desde la papelera.`)) {
       return;
@@ -187,10 +209,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   };
 
   const handleRestoreTenant = async (tenant: Tenant) => {
-    if (adminKey !== getAdminKey()) {
-      showError('Clave de administrador incorrecta');
-      return;
-    }
+    if (!adminKey) return;
 
     if (!confirm(`¿Estás seguro de que quieres restaurar el tenant "${tenant.name}"?`)) {
       return;
@@ -218,10 +237,7 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
   };
 
   const handlePermanentDeleteTenant = async (tenant: Tenant) => {
-    if (adminKey !== getAdminKey()) {
-      showError('Clave de administrador incorrecta');
-      return;
-    }
+    if (!adminKey) return;
 
     if (!confirm(`⚠️ ADVERTENCIA: ¿Estás seguro de que quieres ELIMINAR PERMANENTEMENTE el tenant "${tenant.name}"?\n\n❌ Esta acción NO se puede deshacer.\n❌ Se perderán todos los datos asociados.\n\n¿Continuar con la eliminación permanente?`)) {
       return;
@@ -255,88 +271,62 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
 
   return (
     <div className="space-y-8">
-      <div className="text-center">
-        <h2 className="mb-2 text-2xl font-bold text-gray-900">
-          🔐 Administración de Tenants
+      <div>
+        <h2 className="mb-1 text-xl font-semibold text-slate-800">
+          Admin Tenants
         </h2>
-        <p className="text-gray-800">
+        <p className="text-sm text-slate-600">
           Panel exclusivo para administradores. Consulta y gestiona las credenciales de todos los tenants del sistema.
         </p>
       </div>
 
-      {/* Sección de Autenticación de Admin */}
-      <div className="p-6 bg-red-50 rounded-lg border-2 border-red-200">
-        <div className="flex items-center mb-4">
-          <span className="flex justify-center items-center mr-3 w-8 h-8 text-sm font-bold text-white bg-red-500 rounded-full">
-            🔒
-          </span>
-          <h3 className="text-lg font-semibold text-red-800">
-            Acceso Restringido - Solo Administradores
-          </h3>
-        </div>
-        
-        <p className="mb-4 text-red-700">
-          Esta sección requiere credenciales de administrador para acceder a la gestión de tenants y credenciales del sistema.
-        </p>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block mb-2 text-sm font-medium text-red-700">
-              Clave de Administrador:
-            </label>
-            <div className="flex gap-4 items-center">
-              <input
-                type="password"
-                placeholder="Ingresa la clave de administrador"
-                value={adminKey || ''}
-                onChange={e => setAdminKey(e.target.value)}
-                onKeyPress={handleAdminKeyPress}
-                className="flex-1 px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={() => handleLoadTenants('active')}
-                disabled={loading || !adminKey}
-                className="px-4 py-2 text-white bg-red-600 rounded-md transition-colors hover:bg-red-700 disabled:opacity-50"
-              >
-                {loading ? '⏳ Cargando...' : '🔐 Acceder'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Cargar lista de tenants */}
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => handleLoadTenants('active')}
+          disabled={loading || !adminKey}
+          className="px-4 py-2 text-sm font-medium text-white bg-slate-700 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+        >
+          {loading ? 'Cargando...' : 'Cargar tenants activos'}
+        </button>
+        <button
+          onClick={() => handleLoadTenants('trash')}
+          disabled={loading || !adminKey}
+          className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-200 rounded-lg hover:bg-slate-300 disabled:opacity-50 transition-colors"
+        >
+          Cargar papelera
+        </button>
       </div>
 
       {/* Lista de Tenants */}
-      {(() => {
-        console.log('🔍 [DEBUG] Renderizado - isAuthenticated:', isAuthenticated, 'tenantsList.length:', tenantsList.length);
-        return isAuthenticated && tenantsList.length > 0;
-      })() && (
-        <div className="p-6 bg-white rounded-lg border border-gray-200">
-          <div className="flex justify-between items-center mb-6">
+      {tenantsList.length > 0 && (
+        <div className="p-5 rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-5">
             <div className="flex gap-4 items-center">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {viewMode === 'active' ? '📋 Tenants Activos' : '🗑️ Papelera'} ({tenantsList.length})
+              <h3 className="text-base font-semibold text-slate-800">
+                {viewMode === 'active' ? 'Tenants activos' : 'Papelera'} ({tenantsList.length})
               </h3>
               {/* Toggle entre Activos y Papelera */}
-              <div className="flex p-1 bg-gray-100 rounded-md">
+              <div className="flex p-1 bg-slate-100 rounded-md">
                 <button
                   onClick={() => handleLoadTenants('active')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                     viewMode === 'active'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  ✅ Activos
+                  Activos
                 </button>
                 <button
                   onClick={() => handleLoadTenants('trash')}
                   className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                     viewMode === 'trash'
-                      ? 'bg-white text-red-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  🗑️ Papelera
+                  Papelera
                 </button>
               </div>
             </div>
@@ -347,72 +337,86 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                   setGeneratedCredentials(null);
                   setSelectedTenant(null);
                 }}
-                className="px-3 py-1 text-sm text-white bg-gray-500 rounded-md transition-colors hover:bg-gray-600"
+                className="px-3 py-1 text-sm font-medium text-slate-700 bg-slate-200 rounded-md transition-colors hover:bg-slate-300"
               >
-                🔄 Limpiar
+                Limpiar
               </button>
               <button
                 onClick={() => {
-                  setIsAuthenticated(false);
-                  setAdminKey('');
+                  logout();
                   setTenantsList([]);
                   setGeneratedCredentials(null);
                   setSelectedTenant(null);
                 }}
-                className="px-3 py-1 text-sm text-white bg-red-500 rounded-md transition-colors hover:bg-red-600"
+                className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-200 rounded-md transition-colors hover:bg-slate-300"
               >
-                🚪 Cerrar Sesión
+                Cerrar sesión
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {tenantsList.map(tenant => (
               <div
                 key={tenant.id}
-                className={`border rounded-lg p-4 transition-all duration-200 ${
+                className={`rounded-xl border p-4 transition-all duration-200 ${
                   selectedTenant?.id === tenant.id
-                    ? 'border-blue-500 bg-blue-50 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    ? 'border-slate-400 bg-slate-50 shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
                 }`}
               >
-                <div className="flex justify-between items-start mb-3">
-                  <h4 className="text-sm font-semibold text-gray-900">
+                <div className="flex justify-between items-start gap-2 mb-3">
+                  <h4 className="text-sm font-semibold text-slate-800 truncate">
                     {tenant.name}
                   </h4>
                   {selectedTenant?.id === tenant.id && (
-                    <span className="px-2 py-1 text-xs text-white bg-blue-500 rounded-full">
-                      Activo
+                    <span className="shrink-0 px-2 py-0.5 text-xs font-medium text-slate-600 bg-slate-200 rounded-full">
+                      Seleccionado
                     </span>
                   )}
                 </div>
-                
-                <div className="mb-3 space-y-1 text-xs text-gray-800">
+
+                <div className="mb-4 space-y-1.5 text-xs text-slate-600">
                   <p><strong>ID:</strong> <span className="font-mono">{tenant.id}</span></p>
                   <p><strong>Código:</strong> {tenant.code}</p>
                   <p><strong>CUIT:</strong> {tenant.cuit}</p>
-                  {/* Use tenant.status if available, otherwise use is_active */}
-                  <p><strong>Estado:</strong> <span className={(tenant.status === 'ACTIVE' || tenant.is_active) ? "text-green-600" : "text-red-600"}>{(tenant.status === 'ACTIVE' || tenant.is_active) ? "Activo" : "Inactivo"}</span></p>
+                  {/* Estado: API puede enviar status ('ACTIVE'|'INACTIVE') o is_active/isActive */}
+                  {(() => {
+                    const active = tenant.status === 'ACTIVE' || tenant.is_active === true || tenant.isActive === true;
+                    return (
+                      <p><strong>Estado:</strong> <span className={active ? "text-slate-700" : "text-slate-500"}>{active ? "Activo" : "Inactivo"}</span></p>
+                    );
+                  })()}
                   <p><strong>Creado:</strong> {new Date(tenant.createdAt).toLocaleString('es-AR')}</p>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {viewMode === 'active' ? (
                     <>
                       <button
                         onClick={() => handleLoadTenantCredentials(tenant)}
                         disabled={loading}
-                        className="flex-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md transition-colors hover:bg-blue-700 disabled:opacity-50"
+                        className="flex-1 min-w-0 px-3 py-2 text-sm font-medium text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
+                        title="Obtener credenciales existentes"
                       >
-                        {loading && selectedTenant?.id === tenant.id ? '⏳ Cargando...' : '🔑 Obtener Credenciales'}
+                        {loading && selectedTenant?.id === tenant.id ? 'Cargando…' : 'Obtener credenciales'}
+                      </button>
+                      <button
+                        onClick={() => handleGenerateTenantCredentials(tenant)}
+                        disabled={loading}
+                        className="flex-1 min-w-0 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-200 rounded-lg transition-colors hover:bg-slate-300 disabled:opacity-50"
+                        title="Generar nuevas credenciales (API Key y Secret)"
+                      >
+                        Generar credenciales
                       </button>
                       <button
                         onClick={() => handleDeleteTenant(tenant)}
                         disabled={loading}
-                        className="px-3 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md transition-colors hover:bg-yellow-700 disabled:opacity-50"
+                        className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
                         title="Mover a papelera"
                       >
-                        🗑️
+                        <span className="sr-only">Mover a papelera</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       </button>
                     </>
                   ) : (
@@ -420,18 +424,18 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
                       <button
                         onClick={() => handleRestoreTenant(tenant)}
                         disabled={loading}
-                        className="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md transition-colors hover:bg-green-700 disabled:opacity-50"
+                        className="flex-1 min-w-0 px-3 py-2 text-sm font-medium text-white bg-slate-700 rounded-lg transition-colors hover:bg-slate-800 disabled:opacity-50"
                         title="Restaurar tenant"
                       >
-                        ♻️ Restaurar
+                        Restaurar
                       </button>
                       <button
                         onClick={() => handlePermanentDeleteTenant(tenant)}
                         disabled={loading}
-                        className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md transition-colors hover:bg-red-700 disabled:opacity-50"
+                        className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg transition-colors hover:bg-red-700 disabled:opacity-50"
                         title="Eliminar permanentemente"
                       >
-                        ❌
+                        Eliminar
                       </button>
                     </>
                   )}
@@ -444,87 +448,72 @@ export function TenantAdminTab({ onCredentialsGenerated }: TenantAdminTabProps) 
 
       {/* Credenciales Generadas */}
       {generatedCredentials && selectedTenant && (
-        <div id="admin-generated-credentials" className="p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-300 shadow-xl">
-          <div className="flex items-center mb-4">
-            <span className="mr-3 text-2xl">🎉</span>
-            <h3 className="text-xl font-bold text-green-800">
-              Credenciales del Tenant: {selectedTenant.name}
-            </h3>
-          </div>
-          
-          <div className="p-3 mb-4 bg-yellow-50 rounded-lg border border-yellow-200">
-            <p className="text-sm text-yellow-800">
-              <strong>⚠️ Confidencial:</strong> Estas credenciales son específicas del tenant seleccionado. 
-              Manéjalas con cuidado y no las compartas con usuarios no autorizados.
-            </p>
-          </div>
+        <div id="admin-generated-credentials" className="p-5 rounded-lg border border-slate-200 bg-white shadow-sm">
+          <h3 className="mb-2 text-base font-semibold text-slate-800">
+            Credenciales: {selectedTenant.name}
+          </h3>
+          <p className="mb-4 text-sm text-slate-600">
+            Confidenciales. No compartir con usuarios no autorizados.
+          </p>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-blue-200 shadow-md">
-              <div className="flex-1 mr-4">
-                <label className="flex items-center mb-2 text-sm font-bold text-blue-700">
-                  🔑 API Key
-                </label>
-                <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center gap-4 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+              <div className="flex-1 min-w-0">
+                <label className="block mb-1 text-xs font-medium text-slate-600">API Key</label>
+                <code className="block p-2 font-mono text-sm text-slate-900 break-all bg-white rounded border border-slate-200">
                   {generatedCredentials.apiKey}
                 </code>
               </div>
               <button
                 onClick={() => copyToClipboard(generatedCredentials.apiKey, showToast)}
-                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-blue-700 hover:shadow-lg hover:scale-105"
+                className="shrink-0 px-3 py-2 text-sm font-medium text-white bg-slate-700 rounded-md hover:bg-slate-800 transition-colors"
               >
-                📋 Copiar
+                Copiar
               </button>
             </div>
 
-            <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-purple-200 shadow-md">
-              <div className="flex-1 mr-4">
-                <label className="flex items-center mb-2 text-sm font-bold text-purple-700">
-                  🔐 API Secret
-                </label>
-                <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
+            <div className="flex justify-between items-center gap-4 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+              <div className="flex-1 min-w-0">
+                <label className="block mb-1 text-xs font-medium text-slate-600">API Secret</label>
+                <code className="block p-2 font-mono text-sm text-slate-900 break-all bg-white rounded border border-slate-200">
                   {generatedCredentials.apiSecret}
                 </code>
               </div>
               <button
                 onClick={() => copyToClipboard(generatedCredentials.apiSecret, showToast)}
-                className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-purple-700 hover:shadow-lg hover:scale-105"
+                className="shrink-0 px-3 py-2 text-sm font-medium text-white bg-slate-700 rounded-md hover:bg-slate-800 transition-colors"
               >
-                📋 Copiar
+                Copiar
               </button>
             </div>
 
-            <div className="flex justify-between items-center p-4 bg-white rounded-lg border-2 border-green-200 shadow-md">
-              <div className="flex-1 mr-4">
-                <label className="flex items-center mb-2 text-sm font-bold text-green-700">
-                  🏢 Tenant ID
-                </label>
-                <code className="block p-2 font-mono text-sm text-gray-900 break-all bg-gray-50 rounded border">
+            <div className="flex justify-between items-center gap-4 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+              <div className="flex-1 min-w-0">
+                <label className="block mb-1 text-xs font-medium text-slate-600">Tenant ID</label>
+                <code className="block p-2 font-mono text-sm text-slate-900 break-all bg-white rounded border border-slate-200">
                   {generatedCredentials.tenantId}
                 </code>
               </div>
               <button
                 onClick={() => copyToClipboard(generatedCredentials.tenantId, showToast)}
-                className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg shadow-md transition-all duration-200 transform hover:bg-green-700 hover:shadow-lg hover:scale-105"
+                className="shrink-0 px-3 py-2 text-sm font-medium text-white bg-slate-700 rounded-md hover:bg-slate-800 transition-colors"
               >
-                📋 Copiar
+                Copiar
               </button>
             </div>
           </div>
 
-          {/* Botón para copiar todas las credenciales */}
-          <div className="mt-6 text-center">
+          <div className="mt-4">
             <button
               onClick={() => {
                 const allCredentials = `API Key: ${generatedCredentials.apiKey}\nAPI Secret: ${generatedCredentials.apiSecret}\nTenant ID: ${generatedCredentials.tenantId}`;
                 copyToClipboard(allCredentials, showToast);
               }}
-              className="px-6 py-3 font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg transition-all duration-200 transform hover:from-blue-700 hover:to-purple-700 hover:shadow-xl hover:scale-105"
+              className="px-4 py-2 text-sm font-medium text-white bg-slate-700 rounded-md hover:bg-slate-800 transition-colors"
             >
-              📋 Copiar Todas las Credenciales
+              Copiar todas las credenciales
             </button>
           </div>
-
         </div>
       )}
     </div>

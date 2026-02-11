@@ -26,33 +26,14 @@ export function ToastContainer({ toasts, onRemoveToast }: ToastContainerProps) {
   }, [toasts, onRemoveToast]);
 
   const getToastStyles = (type: string) => {
-    switch (type) {
-      case 'success':
-        return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
-      case 'error':
-        return 'bg-gradient-to-r from-red-500 to-red-600 text-white';
-      case 'warning':
-        return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white';
-      case 'info':
-        return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white';
-      default:
-        return 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
-    }
-  };
-
-  const getToastIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return '✅';
-      case 'error':
-        return '❌';
-      case 'warning':
-        return '⚠️';
-      case 'info':
-        return 'ℹ️';
-      default:
-        return '📢';
-    }
+    const base = 'bg-white border border-slate-200 text-slate-800 shadow-lg';
+    const leftBorder: Record<string, string> = {
+      success: 'border-l-4 border-l-emerald-500',
+      error: 'border-l-4 border-l-red-500',
+      warning: 'border-l-4 border-l-amber-500',
+      info: 'border-l-4 border-l-slate-500',
+    };
+    return `${base} ${leftBorder[type] || leftBorder.info}`;
   };
 
   return (
@@ -61,35 +42,23 @@ export function ToastContainer({ toasts, onRemoveToast }: ToastContainerProps) {
         <div
           key={toast.id}
           className={`
-            min-w-80 max-w-96 p-4 rounded-lg shadow-lg
+            min-w-80 max-w-96 p-4 rounded-xl
             transform transition-all duration-300 ease-in-out
             ${getToastStyles(toast.type)}
             animate-slide-in-right
           `}
         >
           <div className="flex items-center gap-3">
-            <span className="text-xl flex-shrink-0">
-              {getToastIcon(toast.type)}
-            </span>
-            <div className="flex-1">
-              <p className="text-sm font-medium">{toast.message}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-800">{toast.message}</p>
             </div>
             <button
               onClick={() => onRemoveToast(toast.id)}
-              className="text-white hover:text-gray-200 text-xl leading-none ml-2"
+              className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100 shrink-0"
+              aria-label="Cerrar"
             >
               ×
             </button>
-          </div>
-          
-          {/* Barra de progreso */}
-          <div className="mt-2 h-1 bg-white bg-opacity-30 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-white bg-opacity-60 rounded-full animate-progress"
-              style={{
-                animationDuration: `${toast.duration || 3000}ms`
-              }}
-            />
           </div>
         </div>
       ))}
@@ -97,30 +66,14 @@ export function ToastContainer({ toasts, onRemoveToast }: ToastContainerProps) {
   );
 }
 
-// CSS personalizado para las animaciones
+// CSS para animación de entrada
 const styles = `
   @keyframes slide-in-right {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
-
-  @keyframes progress {
-    from { width: 100%; }
-    to { width: 0%; }
-  }
-
   .animate-slide-in-right {
     animation: slide-in-right 0.3s ease-out;
-  }
-
-  .animate-progress {
-    animation: progress linear;
   }
 `;
 
